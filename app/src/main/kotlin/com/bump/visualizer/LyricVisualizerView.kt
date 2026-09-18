@@ -26,6 +26,9 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     private var lastNanos = System.nanoTime()
     private var downX = 0f
     private var modePhase = 0f
+    private var selectedIndex = -1
+    private var dragX = 0f
+    private var dragY = 0f
 
     init {
         setLayerType(View.LAYER_TYPE_HARDWARE, null)
@@ -50,7 +53,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
         val cx = width / 2f
         val cy = height / 2f
-        val current = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)
+        val current = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)\n        if (selectedIndex < 0) selectedIndex = current
 
         // Ship-style wall: the current word is closest to the viewer,
         // surrounding words form a drifting 3D field behind it.
@@ -59,11 +62,11 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         val ordered = (first..last).toList().sortedByDescending { it }
 
         for (i in ordered) {
-            val word = words[i]
+            val word = words[i]\n            val isSelected = i == selectedIndex
             val depthIndex = i - current
             val age = timelineMs - word.startMs
             val progress = ((age / 900f).coerceIn(-1f, 1.5f))
-            val z = depthIndex * 210f - max(0f, progress) * 85f
+            val z = word.z + depthIndex * 210f - max(0f, progress) * 85f
 
             // Perspective projection. Farther words shrink and move toward
             // a vanishing point near the center.
@@ -71,13 +74,13 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
             val drift = sin(modePhase * 0.65f + i * 1.17f)
             val sway = cos(modePhase * 0.42f + i * 0.73f)
 
-            val x = cx + (sin(i * 1.91f) * (120f + abs(depthIndex) * 28f) + sway * 24f) * perspective
-            val y = cy + (depthIndex * 108f + drift * 30f) * perspective
-            val rotationY = (sin(i * 0.61f + modePhase * 0.32f) * 30f) + depthIndex * 3.5f
-            val rotationX = cos(i * 0.47f + modePhase * 0.25f) * 12f
+            val x = cx + word.x + (sin(i * 1.91f) * (120f + abs(depthIndex) * 28f) + sway * 24f) * perspective
+            val y = cy + word.y + (depthIndex * 108f) + drift * 30f) * perspective
+            val rotationY = word.rotationY + (sin(i * 0.61f + modePhase * 0.32f) * 30f) + depthIndex * 3.5f
+            val rotationX = word.rotationX + cos(i * 0.47f + modePhase * 0.25f) * 12f
 
             val isCurrent = i == current
-            val scale = perspective * if (isCurrent) 1.18f else 0.86f
+            val scale = perspective * (if (isCurrent) 1.18f else 0.86f) * word.scale
             val size = if (isCurrent) 82f else 48f * (0.92f + perspective * 0.08f)
             val alpha = if (isCurrent) 255 else (225f * perspective).toInt().coerceIn(25, 210)
 
@@ -143,8 +146,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
                 downX = event.x
                 return true
             }
-            MotionEvent.ACTION_UP -> {
-                if (abs(event.x - downX) < 24f) {
+            MotionEvent.ACTION_MOVE -> {\n                selectedWord()?.let { w -> w.x += event.x - dragX; w.y += event.y - dragY }\n                dragX = event.x; dragY = event.y; invalidate(); return true\n            }\n            MotionEvent.ACTION_UP -> {
+                if (abs(event.x - downX) < 24f && words.isNotEmpty()) {\n                    selectedIndex = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)
                     running = !running
                     lastNanos = System.nanoTime()
                 }
