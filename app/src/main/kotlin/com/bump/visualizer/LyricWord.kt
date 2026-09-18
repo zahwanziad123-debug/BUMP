@@ -9,5 +9,6 @@ data class LyricWord(
     var z: Float = 0f,
     var rotationX: Float = 0f,
     var rotationY: Float = 0f,
-    var scale: Float = 1f
+    var scale: Float = 1f,
+    var keyframes: MutableList<LyricKeyframe> = mutableListOf()
 )
