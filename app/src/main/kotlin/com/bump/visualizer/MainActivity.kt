@@ -373,6 +373,39 @@ class MainActivity : Activity() {
             kfOpacity.setText(k.opacity.toString())
         }
 
+        val advanced = LinearLayout(this).apply { gravity = Gravity.CENTER }
+        advanced.addView(editButton("MASK") {
+            val next = when (visualizer.maskMode()) {
+                MaskMode.NONE -> MaskMode.CINEMA
+                MaskMode.CINEMA -> MaskMode.CIRCLE
+                MaskMode.CIRCLE -> MaskMode.ROUNDED
+                MaskMode.ROUNDED -> MaskMode.NONE
+            }
+            visualizer.setMaskMode(next)
+            status.text = "MASK: ${next.name}"
+        })
+        advanced.addView(editButton("TRAIL -") {
+            val s = visualizer.motionSettings()
+            visualizer.setMotionSettings(s.copy(trailCount = (s.trailCount - 1).coerceAtLeast(0)))
+        })
+        advanced.addView(editButton("TRAIL +") {
+            val s = visualizer.motionSettings()
+            visualizer.setMotionSettings(s.copy(trailCount = (s.trailCount + 1).coerceAtMost(10)))
+        })
+        advanced.addView(editButton("FISHEYE +") {
+            val s = visualizer.motionSettings()
+            val v = (s.fisheyeStrength + 0.04f).coerceAtMost(0.6f)
+            visualizer.setMotionSettings(s.copy(fisheyeStrength = v))
+            if (android.os.Build.VERSION.SDK_INT >= 33) FisheyeEffect.apply(visualizer, v, s.fisheyeFocusX, s.fisheyeFocusY, s.vignette, s.edgeFade)
+        })
+        advanced.addView(editButton("FISHEYE -") {
+            val s = visualizer.motionSettings()
+            val v = (s.fisheyeStrength - 0.04f).coerceAtLeast(0f)
+            visualizer.setMotionSettings(s.copy(fisheyeStrength = v))
+            if (android.os.Build.VERSION.SDK_INT >= 33) FisheyeEffect.apply(visualizer, v, s.fisheyeFocusX, s.fisheyeFocusY, s.vignette, s.edgeFade)
+        })
+        editor.addView(advanced)
+
         val projectControls = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
