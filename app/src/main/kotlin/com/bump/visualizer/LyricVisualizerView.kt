@@ -7,7 +7,7 @@ import android.view.MotionEvent
 import android.view.View
 import kotlin.math.*
 
-enum class VisualMode { SHIP, STACK, TUNNEL }
+enum class VisualMode { SHIP, STACK, TUNNEL, GLITCH }
 
 class LyricVisualizerView(context: Context) : View(context), Choreographer.FrameCallback {
     private var words: List<LyricWord> = LyricTimeline.demo()
