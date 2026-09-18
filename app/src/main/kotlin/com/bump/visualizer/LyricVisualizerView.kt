@@ -141,12 +141,13 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
         for (i in ordered) {
             val word = words[i]
+            val animated = KeyframeEngine.evaluate(word, timelineMs)
             val isSelected = i == selectedIndex
             val depthIndex = i - current
             val age = timelineMs - word.startMs
             val progress = ((age / 900f).coerceIn(-1f, 1.5f))
             val depthStep = when (visualMode) { VisualMode.SHIP -> 210f; VisualMode.STACK -> 155f; VisualMode.TUNNEL -> 330f; VisualMode.GLITCH -> 250f }
-            val z = word.z + depthIndex * depthStep - max(0f, progress) * 85f
+            val z = animated.z + depthIndex * depthStep - max(0f, progress) * 85f
 
             // Perspective projection. Farther words shrink and move toward
             // a vanishing point near the center.
@@ -155,13 +156,13 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
             val sway = cos(modePhase * 0.42f + i * 0.73f)
 
             val glitch = if (visualMode == VisualMode.GLITCH && i == current) sin(modePhase * 22f) * 24f else 0f
-            val x = cx + word.x + glitch + (sin(i * 1.91f) * (120f + abs(depthIndex) * 28f) + sway * 24f) * perspective
-            val y = cy + (word.y + (depthIndex * 108f + drift * 30f)) * perspective
-            val rotationY = word.rotationY + (sin(i * 0.61f + modePhase * 0.32f) * 30f) + depthIndex * 3.5f
-            val rotationX = word.rotationX + cos(i * 0.47f + modePhase * 0.25f) * 12f
+            val x = cx + animated.x + glitch + (sin(i * 1.91f) * (120f + abs(depthIndex) * 28f) + sway * 24f) * perspective
+            val y = cy + (animated.y + (depthIndex * 108f + drift * 30f)) * perspective
+            val rotationY = animated.rotationY + (sin(i * 0.61f + modePhase * 0.32f) * 30f) + depthIndex * 3.5f
+            val rotationX = animated.rotationX + cos(i * 0.47f + modePhase * 0.25f) * 12f
 
             val isCurrent = i == current
-            val scale = perspective * (if (isCurrent) 1.18f else 0.86f) * word.scale
+            val scale = perspective * (if (isCurrent) 1.18f else 0.86f) * animated.scale
             val size = if (isCurrent) 82f else 48f * (0.92f + perspective * 0.08f)
             val alpha = if (isCurrent) 255 else (225f * perspective).toInt().coerceIn(25, 210)
 
@@ -184,7 +185,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
                 edge.textSize = size
                 val shade = 20 + d * 3
                 edge.color = Color.rgb(shade, shade, shade)
-                edge.alpha = (alpha * (0.16f + d / 80f)).toInt().coerceAtMost(180)
+                edge.alpha = (alpha * animated.opacity * (0.16f + d / 80f)).toInt().coerceAtMost(180)
                 canvas.drawText(word.text, x - d * 1.35f, y + d * 1.35f, edge)
             }
 
@@ -200,7 +201,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
             face.textSize = size
             face.color = if (isCurrent) Color.WHITE else Color.rgb(178, 178, 178)
-            face.alpha = alpha
+            face.alpha = (alpha * animated.opacity).toInt().coerceIn(0, 255)
             canvas.drawText(word.text, x, y, face)
 
             if (isSelected) {
