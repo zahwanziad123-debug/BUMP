@@ -103,6 +103,43 @@ class MainActivity : Activity() {
         controls.addView(play)
         controls.addView(fisheye)
 
+        val editor = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+        fun editButton(label: String, action: () -> Unit): Button =
+            Button(this).apply { text = label; setOnClickListener { action() } }
+
+        val navigation = LinearLayout(this).apply { gravity = Gravity.CENTER }
+        navigation.addView(editButton("PREV") {
+            if (visualizer.wordCount() > 0) visualizer.selectWord((visualizer.selectedIndex() - 1).coerceAtLeast(0))
+        })
+        navigation.addView(editButton("NEXT") {
+            if (visualizer.wordCount() > 0) visualizer.selectWord((visualizer.selectedIndex() + 1).coerceAtMost(visualizer.wordCount() - 1))
+        })
+        navigation.addView(editButton("START -") { visualizer.adjustSelected(dStartMs = -40L) })
+        navigation.addView(editButton("START +") { visualizer.adjustSelected(dStartMs = 40L) })
+        navigation.addView(editButton("END -") { visualizer.adjustSelected(dEndMs = -40L) })
+        navigation.addView(editButton("END +") { visualizer.adjustSelected(dEndMs = 40L) })
+        editor.addView(navigation)
+
+        val transform = LinearLayout(this).apply { gravity = Gravity.CENTER }
+        transform.addView(editButton("X-") { visualizer.adjustSelected(dx = -12f) })
+        transform.addView(editButton("X+") { visualizer.adjustSelected(dx = 12f) })
+        transform.addView(editButton("Y-") { visualizer.adjustSelected(dy = -12f) })
+        transform.addView(editButton("Y+") { visualizer.adjustSelected(dy = 12f) })
+        transform.addView(editButton("Z-") { visualizer.adjustSelected(dz = -30f) })
+        transform.addView(editButton("Z+") { visualizer.adjustSelected(dz = 30f) })
+        transform.addView(editButton("RX") { visualizer.adjustSelected(dRotX = 5f) })
+        transform.addView(editButton("RY") { visualizer.adjustSelected(dRotY = 5f) })
+        transform.addView(editButton("S+") { visualizer.adjustSelected(dScale = 0.05f) })
+        transform.addView(editButton("S-") { visualizer.adjustSelected(dScale = -0.05f) })
+        editor.addView(transform)
+
+        root.addView(editor, FrameLayout.LayoutParams(-1, -2).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            bottomMargin = 54
+        })
         root.addView(controls, FrameLayout.LayoutParams(-2, -2).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             bottomMargin = 4
