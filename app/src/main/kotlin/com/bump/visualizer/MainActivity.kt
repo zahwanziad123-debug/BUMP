@@ -255,6 +255,8 @@ class MainActivity : Activity() {
             visualizer.addKeyframe()
             wordTimeline.setWords(visualizer.exportWords())
             wordTimeline.setSelected(visualizer.selectedIndex())
+            wordTimeline.setSelectedKeyframe(visualizer.selectedKeyframeIndex())
+            syncKeyframeFields()
         })
         keyframes.addView(editButton("DELETE KEYFRAME") {
             visualizer.removeSelectedKeyframe()
