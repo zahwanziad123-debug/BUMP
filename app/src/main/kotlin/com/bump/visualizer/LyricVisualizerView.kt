@@ -63,6 +63,17 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     }
     fun wordCount(): Int = words.size
 
+    fun setWordTiming(index: Int, startMs: Long, endMs: Long) {
+        val w = words.getOrNull(index) ?: return
+        val ns = startMs.coerceAtLeast(0L)
+        val ne = endMs.coerceAtLeast(ns + 80L)
+        if (w.startMs == ns && w.endMs == ne) return
+        pushUndo()
+        w.startMs = ns
+        w.endMs = ne
+        invalidate()
+    }
+
     fun setVisualMode(mode: VisualMode) { visualMode = mode; invalidate() }
 
     fun visualMode(): VisualMode = visualMode
