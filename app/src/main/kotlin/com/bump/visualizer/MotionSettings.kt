@@ -16,8 +16,8 @@ enum class MaskMode { NONE, CINEMA, CIRCLE, ROUNDED }
 
 object MotionMath {
     fun curvedDepth(index: Int, step: Float, curve: Float): Float {
-        val sign = if (index < 0) -1f else 1f
-        return sign * kotlin.math.pow(kotlin.math.abs(index).toFloat(), curve.coerceIn(0.55f, 2.2f)) * step
+        val magnitude = kotlin.math.abs(index).toFloat().let { it.pow(curve.coerceIn(0.55f, 2.2f)) }
+        return if (index < 0) -magnitude * step else magnitude * step
     }
 
     fun smooth(value: Float): Float {
