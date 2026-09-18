@@ -9,10 +9,12 @@ import android.view.Gravity
 import android.widget.EditText
 import android.app.AlertDialog
 import android.widget.Button
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
+import android.text.InputType
 import android.widget.HorizontalScrollView
 
 class MainActivity : Activity() {
@@ -26,6 +28,15 @@ class MainActivity : Activity() {
     private lateinit var timeline: SeekBar
     private lateinit var timelineLabel: TextView
     private lateinit var wordTimeline: WordTimelineView
+    private lateinit var keyframeStatus: TextView
+    private lateinit var kfTime: EditText
+    private lateinit var kfX: EditText
+    private lateinit var kfY: EditText
+    private lateinit var kfZ: EditText
+    private lateinit var kfRx: EditText
+    private lateinit var kfRy: EditText
+    private lateinit var kfScale: EditText
+    private lateinit var kfOpacity: EditText
 
     private val syncTask = object : Runnable {
         override fun run() {
@@ -224,8 +235,20 @@ class MainActivity : Activity() {
         navigation.addView(editButton("START +") { visualizer.adjustSelected(dStartMs = 40L) })
         navigation.addView(editButton("END -") { visualizer.adjustSelected(dEndMs = -40L) })
         navigation.addView(editButton("END +") { visualizer.adjustSelected(dEndMs = 40L) })
-        navigation.addView(editButton("UNDO") { visualizer.undo() })
-        navigation.addView(editButton("REDO") { visualizer.redo() })
+        navigation.addView(editButton("UNDO") {
+            visualizer.undo()
+            wordTimeline.setWords(visualizer.exportWords())
+            wordTimeline.setSelected(visualizer.selectedIndex())
+            wordTimeline.setSelectedKeyframe(visualizer.selectedKeyframeIndex())
+            syncKeyframeFields()
+        })
+        navigation.addView(editButton("REDO") {
+            visualizer.redo()
+            wordTimeline.setWords(visualizer.exportWords())
+            wordTimeline.setSelected(visualizer.selectedIndex())
+            wordTimeline.setSelectedKeyframe(visualizer.selectedKeyframeIndex())
+            syncKeyframeFields()
+        })
         editor.addView(navigation)
 
         val keyframes = LinearLayout(this).apply { gravity = Gravity.CENTER }
@@ -246,6 +269,80 @@ class MainActivity : Activity() {
         })
         editor.addView(keyframes)
 
+        keyframeStatus = TextView(this).apply {
+            text = "KEYFRAME: none"
+            textSize = 11f
+            setTextColor(android.graphics.Color.WHITE)
+            gravity = Gravity.CENTER
+        }
+        editor.addView(keyframeStatus)
+
+        fun keyField(hint: String): EditText = EditText(this).apply {
+            this.hint = hint
+            setTextColor(android.graphics.Color.WHITE)
+            setHintTextColor(android.graphics.Color.GRAY)
+            textSize = 12f
+            isSingleLine = true
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
+            minWidth = 78
+            maxWidth = 110
+        }
+
+        kfTime = keyField("TIME")
+        kfX = keyField("X")
+        kfY = keyField("Y")
+        kfZ = keyField("Z")
+        kfRx = keyField("RX")
+        kfRy = keyField("RY")
+        kfScale = keyField("SCALE")
+        kfOpacity = keyField("OPACITY")
+
+        val keyframeValues = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            val row = LinearLayout(this@MainActivity).apply {
+                gravity = Gravity.CENTER
+                addView(kfTime)
+                addView(kfX)
+                addView(kfY)
+                addView(kfZ)
+                addView(kfRx)
+                addView(kfRy)
+                addView(kfScale)
+                addView(kfOpacity)
+            }
+            addView(row)
+        }
+        editor.addView(keyframeValues)
+
+        val keyframeActions = LinearLayout(this).apply { gravity = Gravity.CENTER }
+        keyframeActions.addView(editButton("APPLY KEYFRAME") {
+            val k = visualizer.selectedKeyframe()
+            if (k != null) {
+                visualizer.setSelectedKeyframeValues(
+                    timeMs = kfTime.text.toString().toLongOrNull() ?: k.timeMs,
+                    x = kfX.text.toString().toFloatOrNull() ?: k.x,
+                    y = kfY.text.toString().toFloatOrNull() ?: k.y,
+                    z = kfZ.text.toString().toFloatOrNull() ?: k.z,
+                    rotationX = kfRx.text.toString().toFloatOrNull() ?: k.rotationX,
+                    rotationY = kfRy.text.toString().toFloatOrNull() ?: k.rotationY,
+                    scale = kfScale.text.toString().toFloatOrNull() ?: k.scale,
+                    opacity = kfOpacity.text.toString().toFloatOrNull() ?: k.opacity
+                )
+                wordTimeline.setWords(visualizer.exportWords())
+                wordTimeline.setSelected(visualizer.selectedIndex())
+                wordTimeline.setSelectedKeyframe(visualizer.selectedKeyframeIndex())
+                syncKeyframeFields()
+            }
+        })
+        keyframeActions.addView(editButton("DELETE SELECTED") {
+            visualizer.removeSelectedKeyframe()
+            wordTimeline.setWords(visualizer.exportWords())
+            wordTimeline.setSelected(visualizer.selectedIndex())
+            wordTimeline.setSelectedKeyframe(visualizer.selectedKeyframeIndex())
+            syncKeyframeFields()
+        })
+        editor.addView(keyframeActions)
+
         val transform = LinearLayout(this).apply { gravity = Gravity.CENTER }
         transform.addView(editButton("X-") { visualizer.adjustSelected(dx = -12f) })
         transform.addView(editButton("X+") { visualizer.adjustSelected(dx = 12f) })
@@ -258,6 +355,23 @@ class MainActivity : Activity() {
         transform.addView(editButton("S+") { visualizer.adjustSelected(dScale = 0.05f) })
         transform.addView(editButton("S-") { visualizer.adjustSelected(dScale = -0.05f) })
         editor.addView(transform)
+
+        fun syncKeyframeFields() {
+            val k = visualizer.selectedKeyframe()
+            if (k == null) {
+                keyframeStatus.text = "KEYFRAME: none"
+                return
+            }
+            keyframeStatus.text = "KEYFRAME ${visualizer.selectedKeyframeIndex() + 1} / ${visualizer.keyframeCount()}"
+            kfTime.setText(k.timeMs.toString())
+            kfX.setText(k.x.toString())
+            kfY.setText(k.y.toString())
+            kfZ.setText(k.z.toString())
+            kfRx.setText(k.rotationX.toString())
+            kfRy.setText(k.rotationY.toString())
+            kfScale.setText(k.scale.toString())
+            kfOpacity.setText(k.opacity.toString())
+        }
 
         val projectControls = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
