@@ -177,6 +177,19 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         invalidate()
     }
 
+    fun moveSelectedKeyframeTime(timeMs: Long) {
+        val w = selectedWord() ?: return
+        if (selectedKeyframeIndex !in w.keyframes.indices) return
+        val old = w.keyframes[selectedKeyframeIndex]
+        val previous = if (selectedKeyframeIndex > 0) w.keyframes[selectedKeyframeIndex - 1].timeMs else 0L
+        val next = if (selectedKeyframeIndex < w.keyframes.lastIndex) w.keyframes[selectedKeyframeIndex + 1].timeMs else Long.MAX_VALUE
+        val t = timeMs.coerceIn(previous + 1L, (next - 1L).coerceAtLeast(previous + 1L))
+        if (t == old.timeMs) return
+        w.keyframes[selectedKeyframeIndex] = old.copy(timeMs = t)
+        timelineMs = t
+        invalidate()
+    }
+
     fun setSelectedKeyframeTime(timeMs: Long) {
         val k = selectedKeyframe() ?: return
         setSelectedKeyframeValues(timeMs, k.x, k.y, k.z, k.rotationX, k.rotationY, k.scale, k.opacity)
