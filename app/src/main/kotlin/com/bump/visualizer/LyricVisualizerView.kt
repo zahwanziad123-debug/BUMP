@@ -32,6 +32,9 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     private var visualMode = VisualMode.SHIP
     private var selectedIndex = -1
     private var selectedKeyframeIndex = -1
+    private var motionSettings = MotionSettings()
+    private var maskMode = MaskMode.NONE
+    private var selectedKeyframeIndex = -1
     private var dragX = 0f
     private var dragY = 0f
 
@@ -90,6 +93,59 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     }
 
     fun wordCount(): Int = words.size
+
+    fun selectKeyframe(index: Int) {
+        val w = selectedWord() ?: return
+        selectedKeyframeIndex = if (index in w.keyframes.indices) index else -1
+        invalidate()
+    }
+
+    fun selectedKeyframeIndex(): Int = selectedKeyframeIndex
+    fun keyframeCount(): Int = selectedWord()?.keyframes?.size ?: 0
+
+    fun moveSelectedKeyframe(newTimeMs: Long) {
+        val w = selectedWord() ?: return
+        val k = w.keyframes.getOrNull(selectedKeyframeIndex) ?: return
+        val others = w.keyframes.filterIndexed { i, _ -> i != selectedKeyframeIndex }
+        val minTime = others.filter { it.timeMs < k.timeMs }.maxOfOrNull { it.timeMs + 20L } ?: 0L
+        val maxTime = others.filter { it.timeMs > k.timeMs }.minOfOrNull { it.timeMs - 20L } ?: Long.MAX_VALUE
+        val next = newTimeMs.coerceIn(minTime, maxTime)
+        if (next == k.timeMs) return
+        pushUndo()
+        w.keyframes[selectedKeyframeIndex] = k.copy(timeMs = next)
+        w.keyframes.sortBy { it.timeMs }
+        selectedKeyframeIndex = w.keyframes.indexOfFirst { it.timeMs == next }
+        invalidate()
+    }
+
+    fun deleteSelectedKeyframe() {
+        val w = selectedWord() ?: return
+        if (selectedKeyframeIndex !in w.keyframes.indices) return
+        pushUndo()
+        w.keyframes.removeAt(selectedKeyframeIndex)
+        selectedKeyframeIndex = -1
+        invalidate()
+    }
+
+    fun adjustSelectedKeyframe(dx: Float = 0f, dy: Float = 0f, dz: Float = 0f,
+                               dRotX: Float = 0f, dRotY: Float = 0f,
+                               dScale: Float = 0f, dOpacity: Float = 0f) {
+        val w = selectedWord() ?: return
+        val k = w.keyframes.getOrNull(selectedKeyframeIndex) ?: return
+        pushUndo()
+        w.keyframes[selectedKeyframeIndex] = k.copy(
+            x = k.x + dx, y = k.y + dy, z = k.z + dz,
+            rotationX = k.rotationX + dRotX, rotationY = k.rotationY + dRotY,
+            scale = (k.scale + dScale).coerceIn(0.05f, 5f),
+            opacity = (k.opacity + dOpacity).coerceIn(0f, 1f)
+        )
+        invalidate()
+    }
+
+    fun setMotionSettings(settings: MotionSettings) { motionSettings = settings; invalidate() }
+    fun motionSettings(): MotionSettings = motionSettings
+    fun setMaskMode(mode: MaskMode) { maskMode = mode; invalidate() }
+    fun maskMode(): MaskMode = maskMode
 
     fun setWordTiming(index: Int, startMs: Long, endMs: Long) {
         val w = words.getOrNull(index) ?: return
@@ -298,8 +354,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
                 VisualMode.TUNNEL -> 330f
                 VisualMode.GLITCH -> 250f
             }
-            val z = animated.z + depthIndex * depthStep - max(0f, progress) * 85f
-            val perspective = 1f / (1f + abs(z) / 1050f)
+            val z = animated.z + MotionMath.curvedDepth(depthIndex, depthStep, motionSettings.depthCurve) - max(0f, progress) * 85f
+            val perspective = 1f / (1f + abs(z) / motionSettings.perspective)
             val drift = sin(modePhase * 0.65f + i * 1.17f)
             val sway = cos(modePhase * 0.42f + i * 0.73f)
             val glitch = if (visualMode == VisualMode.GLITCH && i == current) sin(modePhase * 22f) * 24f else 0f
@@ -364,6 +420,27 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
             "BUMP  •  ${visualMode.name}  •  ${formatTime(timelineMs)}  •  ${if (running) "PLAYING" else "PAUSED"}",
             cx, height - 28f, face
         )
+    }
+
+    private fun applyMask(canvas: Canvas, mode: MaskMode) {
+        when (mode) {
+            MaskMode.NONE -> Unit
+            MaskMode.CINEMA -> {
+                val bar = height * 0.095f
+                canvas.clipRect(0f, bar, width.toFloat(), height - bar)
+            }
+            MaskMode.CIRCLE -> {
+                val r = min(width, height) * 0.47f
+                canvas.clipPath(Path().apply { addCircle(width / 2f, height / 2f, r, Path.Direction.CW) })
+            }
+            MaskMode.ROUNDED -> {
+                val ix = width * 0.035f
+                val iy = height * 0.06f
+                canvas.clipPath(Path().apply {
+                    addRoundRect(ix, iy, width - ix, height - iy, 48f, 48f, Path.Direction.CW)
+                })
+            }
+        }
     }
 
     private fun formatTime(ms: Long): String {
