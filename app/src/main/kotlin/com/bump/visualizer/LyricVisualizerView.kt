@@ -8,7 +8,7 @@ import android.view.View
 import kotlin.math.*
 
 class LyricVisualizerView(context: Context) : View(context), Choreographer.FrameCallback {
-    private val words = LyricTimeline.demo()
+    private var words: List<LyricWord> = LyricTimeline.demo()
     private val face = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = Typeface.create("sans-serif", Typeface.BOLD)
         textAlign = Paint.Align.CENTER
