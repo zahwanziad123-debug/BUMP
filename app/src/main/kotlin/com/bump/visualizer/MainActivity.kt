@@ -4,19 +4,21 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.os.Handler
-import android.os.Looper
 
 class MainActivity : Activity() {
     private lateinit var visualizer: LyricVisualizerView
     private lateinit var audio: AudioPlayerController
     private val handler = Handler(Looper.getMainLooper())
-    private var fisheyeOn = false\n    private val lyricPickerRequest = 101
+    private var fisheyeOn = false
+    private val songPickerRequest = 100
+    private val lyricPickerRequest = 101
 
     private val syncTask = object : Runnable {
         override fun run() {
@@ -61,7 +63,23 @@ class MainActivity : Activity() {
                     Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                         type = "audio/*"
                         addCategory(Intent.CATEGORY_OPENABLE)
-                    }, 100
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                    },
+                    songPickerRequest
+                )
+            }
+        }
+
+        val pickLrc = Button(this).apply {
+            text = "OPEN LRC"
+            setOnClickListener {
+                startActivityForResult(
+                    Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        type = "text/*"
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                    },
+                    lyricPickerRequest
                 )
             }
         }
@@ -72,7 +90,7 @@ class MainActivity : Activity() {
         }
 
         val fisheye = Button(this).apply {
-            text = "OPEN LRC"\n            setOnClickListener {\n                startActivityForResult(\n                    Intent(Intent.ACTION_OPEN_DOCUMENT).apply {\n                        type = "text/*"\n                        addCategory(Intent.CATEGORY_OPENABLE)\n                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)\n                    }, lyricPickerRequest\n                )\n            }\n        }\n\n        val fisheye = Button(this).apply {\n            text = "FISHEYE"
+            text = "FISHEYE"
             setOnClickListener {
                 fisheyeOn = !fisheyeOn
                 if (fisheyeOn) visualizer.post { FisheyeEffect.apply(visualizer, 0.18f) }
@@ -81,6 +99,7 @@ class MainActivity : Activity() {
         }
 
         controls.addView(pick)
+        controls.addView(pickLrc)
         controls.addView(play)
         controls.addView(fisheye)
 
@@ -96,12 +115,16 @@ class MainActivity : Activity() {
     @Deprecated("Use Activity Result APIs in a later UI pass")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == lyricPickerRequest && resultCode == RESULT_OK) {\n            data?.data?.let { uri ->\n                LyricFileLoader.load(this, uri)?.let { text ->\n                    visualizer.setWords(LrcParser.parse(text))\n                }\n            }\n        }\n        if (requestCode == 100 && resultCode == RESULT_OK) {
-            data?.data?.let { uri: Uri ->
-                contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
+        if (resultCode != RESULT_OK) return
+
+        data?.data?.let { uri ->
+            if (requestCode == lyricPickerRequest) {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                LyricFileLoader.load(this, uri)?.let { text ->
+                    visualizer.setWords(LrcParser.parse(text))
+                }
+            } else if (requestCode == songPickerRequest) {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 audio.open(uri)
             }
         }
