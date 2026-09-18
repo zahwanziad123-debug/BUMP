@@ -21,6 +21,7 @@ class WordTimelineView(context: Context) : View(context) {
     private var dragging = false
     private var dragMode = 0
     private var downX = 0f
+    private var originalSelected = -1
     private var originalStart = 0L
     private var originalEnd = 0L
     private var originalKeyframeTime = 0L
