@@ -16,7 +16,7 @@ class MainActivity : Activity() {
     private lateinit var visualizer: LyricVisualizerView
     private lateinit var audio: AudioPlayerController
     private val handler = Handler(Looper.getMainLooper())
-    private var fisheyeOn = false
+    private var fisheyeOn = false\n    private val lyricPickerRequest = 101
 
     private val syncTask = object : Runnable {
         override fun run() {
@@ -72,7 +72,7 @@ class MainActivity : Activity() {
         }
 
         val fisheye = Button(this).apply {
-            text = "FISHEYE"
+            text = "OPEN LRC"\n            setOnClickListener {\n                startActivityForResult(\n                    Intent(Intent.ACTION_OPEN_DOCUMENT).apply {\n                        type = "text/*"\n                        addCategory(Intent.CATEGORY_OPENABLE)\n                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)\n                    }, lyricPickerRequest\n                )\n            }\n        }\n\n        val fisheye = Button(this).apply {\n            text = "FISHEYE"
             setOnClickListener {
                 fisheyeOn = !fisheyeOn
                 if (fisheyeOn) visualizer.post { FisheyeEffect.apply(visualizer, 0.18f) }
@@ -96,7 +96,7 @@ class MainActivity : Activity() {
     @Deprecated("Use Activity Result APIs in a later UI pass")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 100 && resultCode == RESULT_OK) {
+        if (requestCode == lyricPickerRequest && resultCode == RESULT_OK) {\n            data?.data?.let { uri ->\n                LyricFileLoader.load(this, uri)?.let { text ->\n                    visualizer.setWords(LrcParser.parse(text))\n                }\n            }\n        }\n        if (requestCode == 100 && resultCode == RESULT_OK) {
             data?.data?.let { uri: Uri ->
                 contentResolver.takePersistableUriPermission(
                     uri,
