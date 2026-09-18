@@ -163,6 +163,8 @@ class MainActivity : Activity() {
             onSeek = { positionMs ->
                 if (audio.durationMs > 0) audio.seekTo(positionMs)
             }
+            onWordEditStarted = { visualizer.beginTimingEdit() }
+            onWordEditFinished = { visualizer.endTimingEdit() }
         }
         val timelineScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = true
