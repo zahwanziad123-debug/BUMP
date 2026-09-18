@@ -285,6 +285,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
         val cx = width / 2f
         val cy = height / 2f
+        canvas.save()
+        applyMask(canvas, maskMode)
         val current = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)
         if (selectedIndex !in words.indices) selectedIndex = current
 
@@ -305,15 +307,23 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
                 VisualMode.TUNNEL -> 330f
                 VisualMode.GLITCH -> 250f
             }
-            val z = animated.z + MotionMath.curvedDepth(depthIndex, depthStep, motionSettings.depthCurve) - max(0f, progress) * 85f
+            val z = animated.z +
+                MotionMath.curvedDepth(depthIndex, depthStep, motionSettings.depthCurve) -
+                max(0f, progress) * motionSettings.travel
             val perspective = 1f / (1f + abs(z) / motionSettings.perspective)
             val drift = sin(modePhase * 0.65f + i * 1.17f)
             val sway = cos(modePhase * 0.42f + i * 0.73f)
             val glitch = if (visualMode == VisualMode.GLITCH && i == current) sin(modePhase * 22f) * 24f else 0f
-            val x = cx + animated.x + glitch + (sin(i * 1.91f) * (120f + abs(depthIndex) * 28f) + sway * 24f) * perspective
-            val y = cy + (animated.y + (depthIndex * 108f + drift * 30f)) * perspective
-            val rotationY = animated.rotationY + sin(i * 0.61f + modePhase * 0.32f) * 30f + depthIndex * 3.5f
-            val rotationX = animated.rotationX + cos(i * 0.47f + modePhase * 0.25f) * 12f
+            val x = cx + animated.x + glitch +
+                (sin(i * 1.91f) * (120f + abs(depthIndex) * 28f) +
+                    sway * motionSettings.sway) * perspective
+            val y = cy + (animated.y +
+                (depthIndex * 108f + drift * motionSettings.drift)) * perspective
+            val rotationY = animated.rotationY +
+                sin(i * 0.61f + modePhase * 0.32f) * motionSettings.tilt +
+                depthIndex * motionSettings.depthTilt
+            val rotationX = animated.rotationX +
+                cos(i * 0.47f + modePhase * 0.25f) * (motionSettings.tilt * 0.4f)
             val isCurrent = i == current
             val scale = perspective * (if (isCurrent) 1.18f else 0.86f) * animated.scale
             val size = if (isCurrent) 82f else 48f * (0.92f + perspective * 0.08f)
@@ -345,6 +355,17 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
                 canvas.drawText(word.text, x - 18f, y + 4f, edge)
                 edge.alpha = 18
                 canvas.drawText(word.text, x - 34f, y + 8f, edge)
+
+                val trails = motionSettings.trailCount.coerceIn(0, 8)
+                for (trail in 1..trails) {
+                    edge.alpha = (32f / trail).toInt().coerceIn(4, 24)
+                    canvas.drawText(
+                        word.text,
+                        x - motionSettings.trailSpacing * trail,
+                        y + motionSettings.trailSpacing * trail * 0.18f,
+                        edge
+                    )
+                }
             }
 
             face.textSize = size
@@ -363,6 +384,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
             }
             canvas.restore()
         }
+
+        canvas.restore()
 
         face.textSize = 12f
         face.color = Color.rgb(105, 105, 105)
