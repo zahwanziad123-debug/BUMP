@@ -20,7 +20,10 @@ class MainActivity : Activity() {
     private lateinit var audio: AudioPlayerController
     private val handler = Handler(Looper.getMainLooper())
     private var fisheyeOn = false
+    private var fisheyeStrengthIndex = 1
     private var visualModeIndex = 0
+    private var motionPresetIndex = 0
+    private var maskModeIndex = 0
     private val songPickerRequest = 100
     private val lyricPickerRequest = 101
     private lateinit var timeline: SeekBar
@@ -132,9 +135,47 @@ class MainActivity : Activity() {
         controls.addView(modeButton)
 
         controls.addView(editButton("FISHEYE") {
-            fisheyeOn = !fisheyeOn
-            if (fisheyeOn) visualizer.post { FisheyeEffect.apply(visualizer, 0.18f) }
-            else FisheyeEffect.clear(visualizer)
+            if (!fisheyeOn) {
+                fisheyeOn = true
+                fisheyeStrengthIndex = 1
+            } else {
+                fisheyeStrengthIndex = (fisheyeStrengthIndex + 1) % 4
+                if (fisheyeStrengthIndex == 0) {
+                    fisheyeOn = false
+                    FisheyeEffect.clear(visualizer)
+                    return@editButton
+                }
+            }
+            val strength = when (fisheyeStrengthIndex) {
+                1 -> 0.14f
+                2 -> 0.22f
+                else -> 0.32f
+            }
+            FisheyeEffect.apply(visualizer, strength, 0.5f, 0.5f, 0.34f, 0.08f)
+        })
+
+        controls.addView(editButton("SHIP MOTION") {
+            motionPresetIndex = (motionPresetIndex + 1) % 4
+            val settings = when (motionPresetIndex) {
+                0 -> MotionSettings()
+                1 -> MotionSettings(depthCurve = 0.78f, perspective = 900f, travel = 120f, sway = 34f, drift = 42f, tilt = 38f, depthTilt = 4.5f, trailCount = 4, trailSpacing = 16f)
+                2 -> MotionSettings(depthCurve = 1.35f, perspective = 1250f, travel = 55f, sway = 16f, drift = 20f, tilt = 22f, depthTilt = 2.4f, trailCount = 2, trailSpacing = 24f)
+                else -> MotionSettings(depthCurve = 1.75f, perspective = 1450f, travel = 35f, sway = 10f, drift = 14f, tilt = 18f, depthTilt = 1.8f, trailCount = 5, trailSpacing = 12f)
+            }
+            visualizer.setMotionSettings(settings)
+            status.text = "SHIP MOTION PRESET " + motionPresetIndex
+        })
+
+        controls.addView(editButton("MASK") {
+            maskModeIndex = (maskModeIndex + 1) % 4
+            val mode = when (maskModeIndex) {
+                0 -> MaskMode.NONE
+                1 -> MaskMode.CINEMA
+                2 -> MaskMode.CIRCLE
+                else -> MaskMode.ROUNDED
+            }
+            visualizer.setMaskMode(mode)
+            status.text = "MASK: " + mode.name
         })
 
         val editor = LinearLayout(this).apply {
