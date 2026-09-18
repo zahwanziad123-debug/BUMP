@@ -111,7 +111,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
             val depthIndex = i - current
             val age = timelineMs - word.startMs
             val progress = ((age / 900f).coerceIn(-1f, 1.5f))
-            val z = word.z + depthIndex * 210f - max(0f, progress) * 85f
+            val depthStep = when (visualMode) { VisualMode.SHIP -> 210f; VisualMode.STACK -> 155f; VisualMode.TUNNEL -> 330f; VisualMode.GLITCH -> 250f }
+            val z = word.z + depthIndex * depthStep - max(0f, progress) * 85f
 
             // Perspective projection. Farther words shrink and move toward
             // a vanishing point near the center.
@@ -119,7 +120,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
             val drift = sin(modePhase * 0.65f + i * 1.17f)
             val sway = cos(modePhase * 0.42f + i * 0.73f)
 
-            val x = cx + word.x + (sin(i * 1.91f) * (120f + abs(depthIndex) * 28f) + sway * 24f) * perspective
+            val glitch = if (visualMode == VisualMode.GLITCH && i == current) sin(modePhase * 22f) * 24f else 0f
+            val x = cx + word.x + glitch + (sin(i * 1.91f) * (120f + abs(depthIndex) * 28f) + sway * 24f) * perspective
             val y = cy + (word.y + (depthIndex * 108f + drift * 30f)) * perspective
             val rotationY = word.rotationY + (sin(i * 0.61f + modePhase * 0.32f) * 30f) + depthIndex * 3.5f
             val rotationX = word.rotationX + cos(i * 0.47f + modePhase * 0.25f) * 12f
