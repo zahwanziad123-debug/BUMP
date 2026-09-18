@@ -34,7 +34,6 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     private var selectedKeyframeIndex = -1
     private var motionSettings = MotionSettings()
     private var maskMode = MaskMode.NONE
-    private var selectedKeyframeIndex = -1
     private var dragX = 0f
     private var dragY = 0f
 
@@ -93,53 +92,6 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     }
 
     fun wordCount(): Int = words.size
-
-    fun selectKeyframe(index: Int) {
-        val w = selectedWord() ?: return
-        selectedKeyframeIndex = if (index in w.keyframes.indices) index else -1
-        invalidate()
-    }
-
-    fun keyframeCount(): Int = selectedWord()?.keyframes?.size ?: 0
-
-    fun moveSelectedKeyframe(newTimeMs: Long) {
-        val w = selectedWord() ?: return
-        val k = w.keyframes.getOrNull(selectedKeyframeIndex) ?: return
-        val others = w.keyframes.filterIndexed { i, _ -> i != selectedKeyframeIndex }
-        val minTime = others.filter { it.timeMs < k.timeMs }.maxOfOrNull { it.timeMs + 20L } ?: 0L
-        val maxTime = others.filter { it.timeMs > k.timeMs }.minOfOrNull { it.timeMs - 20L } ?: Long.MAX_VALUE
-        val next = newTimeMs.coerceIn(minTime, maxTime)
-        if (next == k.timeMs) return
-        pushUndo()
-        w.keyframes[selectedKeyframeIndex] = k.copy(timeMs = next)
-        w.keyframes.sortBy { it.timeMs }
-        selectedKeyframeIndex = w.keyframes.indexOfFirst { it.timeMs == next }
-        invalidate()
-    }
-
-    fun deleteSelectedKeyframe() {
-        val w = selectedWord() ?: return
-        if (selectedKeyframeIndex !in w.keyframes.indices) return
-        pushUndo()
-        w.keyframes.removeAt(selectedKeyframeIndex)
-        selectedKeyframeIndex = -1
-        invalidate()
-    }
-
-    fun adjustSelectedKeyframe(dx: Float = 0f, dy: Float = 0f, dz: Float = 0f,
-                               dRotX: Float = 0f, dRotY: Float = 0f,
-                               dScale: Float = 0f, dOpacity: Float = 0f) {
-        val w = selectedWord() ?: return
-        val k = w.keyframes.getOrNull(selectedKeyframeIndex) ?: return
-        pushUndo()
-        w.keyframes[selectedKeyframeIndex] = k.copy(
-            x = k.x + dx, y = k.y + dy, z = k.z + dz,
-            rotationX = k.rotationX + dRotX, rotationY = k.rotationY + dRotY,
-            scale = (k.scale + dScale).coerceIn(0.05f, 5f),
-            opacity = (k.opacity + dOpacity).coerceIn(0f, 1f)
-        )
-        invalidate()
-    }
 
     fun setMotionSettings(settings: MotionSettings) { motionSettings = settings; invalidate() }
     fun motionSettings(): MotionSettings = motionSettings
