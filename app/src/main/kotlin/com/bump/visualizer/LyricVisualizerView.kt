@@ -100,7 +100,6 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         invalidate()
     }
 
-    fun selectedKeyframeIndex(): Int = selectedKeyframeIndex
     fun keyframeCount(): Int = selectedWord()?.keyframes?.size ?: 0
 
     fun moveSelectedKeyframe(newTimeMs: Long) {
