@@ -92,7 +92,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     fun addKeyframe(timeMs: Long = timelineMs) {
         val w = selectedWord() ?: return
         pushUndo()
-        val state = AnimatedWordState(w.x, w.y, w.z, w.rotationX, w.rotationY, w.scale, 1f)
+        val state = KeyframeEngine.evaluate(w, timeMs)
         w.keyframes.removeAll { abs(it.timeMs - timeMs) < 20L }
         w.keyframes.add(LyricKeyframe(timeMs.coerceAtLeast(0L), state.x, state.y, state.z, state.rotationX, state.rotationY, state.scale, state.opacity))
         w.keyframes.sortBy { it.timeMs }
@@ -121,7 +121,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     private fun snapshot() = EditSnapshot(words.map { cloneWord(it) }, selectedIndex, visualMode)
     private fun pushUndo() { undoStack.addLast(snapshot()); if (undoStack.size > 40) undoStack.removeFirst(); redoStack.clear() }
     fun undo() { val s = undoStack.removeLastOrNull() ?: return; redoStack.addLast(snapshot()); words = s.words.map { cloneWord(it) }; selectedIndex = s.selected; visualMode = s.mode; invalidate() }
-    fun redo() { val s = redoStack.removeLastOrNull() ?: return; undoStack.addLast(snapshot()); words = s.words.map { it.copy() }; selectedIndex = s.selected; visualMode = s.mode; invalidate() }
+    fun redo() { val s = redoStack.removeLastOrNull() ?: return; undoStack.addLast(snapshot()); words = s.words.map { cloneWord(it) }; selectedIndex = s.selected; visualMode = s.mode; invalidate() }
 
     fun adjustSelected(dx: Float = 0f, dy: Float = 0f, dz: Float = 0f, dRotX: Float = 0f, dRotY: Float = 0f, dScale: Float = 0f, dStartMs: Long = 0L, dEndMs: Long = 0L) {
         val w = selectedWord() ?: return
@@ -130,6 +130,16 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         w.scale = (w.scale + dScale).coerceIn(0.25f, 3f)
         w.startMs = (w.startMs + dStartMs).coerceAtLeast(0L)
         w.endMs = (w.endMs + dEndMs).coerceAtLeast(w.startMs + 80L)
+
+        val keyframeIndex = w.keyframes.indices.minByOrNull { abs(w.keyframes[it].timeMs - timelineMs) }
+        if (keyframeIndex != null && abs(w.keyframes[keyframeIndex].timeMs - timelineMs) <= 60L) {
+            val old = w.keyframes[keyframeIndex]
+            w.keyframes[keyframeIndex] = old.copy(
+                x = w.x, y = w.y, z = w.z,
+                rotationX = w.rotationX, rotationY = w.rotationY,
+                scale = w.scale
+            )
+        }
         invalidate()
     }
 
