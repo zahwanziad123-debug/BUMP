@@ -24,11 +24,26 @@ class WordTimelineView(context: Context) : View(context) {
     private var originalSelected = -1
     var onWordSelected: ((Int) -> Unit)? = null
     var onWordChanged: ((Int, Long, Long) -> Unit)? = null
+    var onSeek: ((Long) -> Unit)? = null
 
-    fun setWords(value: List<LyricWord>) { words = value; invalidate() }
+    fun setWords(value: List<LyricWord>) { words = value.map { it.copy() }; invalidate() }
     fun setSelected(index: Int) { selected = index; invalidate() }
     fun setDuration(ms: Long) { durationMs = max(1000L, ms); invalidate() }
     fun setCursor(ms: Long) { cursorMs = ms.coerceIn(0L, durationMs); invalidate() }
+
+    fun zoomIn() { setZoom(pxPerMs * 1.5f) }
+    fun zoomOut() { setZoom(pxPerMs / 1.5f) }
+    fun setZoom(value: Float) {
+        pxPerMs = value.coerceIn(0.02f, 0.32f)
+        requestLayout()
+        invalidate()
+    }
+
+    fun contentWidth(): Int = max(5000f, durationMs * pxPerMs + 120f).toInt()
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        setMeasuredDimension(contentWidth(), 170)
+    }
 
     private fun timeToX(ms: Long): Float = ms * pxPerMs
     private fun xToTime(x: Float): Long = (x / pxPerMs).toLong().coerceIn(0L, durationMs)
@@ -87,6 +102,7 @@ class WordTimelineView(context: Context) : View(context) {
                     dragging = true
                 } else {
                     cursorMs = xToTime(e.x)
+                    onSeek?.invoke(cursorMs)
                     dragging = false
                 }
                 invalidate()
