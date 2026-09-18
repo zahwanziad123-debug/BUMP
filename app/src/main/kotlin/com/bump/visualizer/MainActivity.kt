@@ -120,11 +120,12 @@ class MainActivity : Activity() {
         val mode = Button(this).apply {
             text = "SHIP"
             setOnClickListener {
-                visualModeIndex = (visualModeIndex + 1) % 3
+                visualModeIndex = (visualModeIndex + 1) % 4
                 val next = when (visualModeIndex) {
                     0 -> VisualMode.SHIP
                     1 -> VisualMode.STACK
-                    else -> VisualMode.TUNNEL
+                    2 -> VisualMode.TUNNEL
+                    else -> VisualMode.GLITCH
                 }
                 text = next.name
                 visualizer.setVisualMode(next)
@@ -193,6 +194,26 @@ class MainActivity : Activity() {
         root.addView(controls, FrameLayout.LayoutParams(-2, -2).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             bottomMargin = 4
+        })
+
+        val projectControls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        projectControls.addView(editButton("SAVE PROJECT") {
+            ProjectStore.save(this@MainActivity, visualizer.exportWords(), visualizer.visualMode())
+            providerStatus.text = "PROJECT SAVED"
+        })
+        projectControls.addView(editButton("LOAD PROJECT") {
+            ProjectStore.load(this@MainActivity)?.let { project ->
+                visualizer.setWords(project.words)
+                visualizer.setVisualMode(project.mode)
+                providerStatus.text = "PROJECT LOADED"
+            }
+        })
+        root.addView(projectControls, FrameLayout.LayoutParams(-2, -2).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            topMargin = 92
         })
 
         setContentView(root)
