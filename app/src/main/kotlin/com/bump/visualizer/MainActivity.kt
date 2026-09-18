@@ -6,8 +6,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
-import android.widget.EditText
-import android.app.AlertDialog
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -258,7 +256,6 @@ class MainActivity : Activity() {
             wordTimeline.setWords(visualizer.exportWords())
             wordTimeline.setSelected(visualizer.selectedIndex())
         })
-        keyframes.addView(editButton("EDIT KEYFRAME") { showKeyframeEditor() })
         keyframes.addView(editButton("DELETE KEYFRAME") {
             visualizer.removeSelectedKeyframe()
             wordTimeline.setWords(visualizer.exportWords())
