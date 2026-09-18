@@ -44,7 +44,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         Choreographer.getInstance().postFrameCallback(this)
     }
 
-    override fun onDraw(canvas: Canvas) {
+    override fun syncTo(ms: Long, playing: Boolean) {\n        timelineMs = ms.coerceAtLeast(0L)\n        running = playing\n        invalidate()\n    }\n\n    fun onDraw(canvas: Canvas) {
         canvas.drawColor(Color.BLACK)
         if (width == 0 || height == 0) return
 
