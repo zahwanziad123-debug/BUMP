@@ -49,9 +49,11 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         Choreographer.getInstance().postFrameCallback(this)
     }
 
-    fun setWords(newWords: List<LyricWord>) { words = newWords.map { it.copy() }.toMutableList(); selectedIndex = -1; timelineMs = 0L; undoStack.clear(); redoStack.clear(); invalidate() }
+    private fun cloneWord(w: LyricWord) = w.copy(keyframes = w.keyframes.map { it.copy() }.toMutableList())
 
-    fun exportWords(): List<LyricWord> = words.map { it.copy() }
+    fun setWords(newWords: List<LyricWord>) { words = newWords.map { cloneWord(it) }.toMutableList(); selectedIndex = -1; timelineMs = 0L; undoStack.clear(); redoStack.clear(); invalidate() }
+
+    fun exportWords(): List<LyricWord> = words.map { cloneWord(it) }
 
     fun selectedWord(): LyricWord? = words.getOrNull(selectedIndex)
     fun selectedIndex(): Int = selectedIndex
@@ -116,9 +118,9 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     private val undoStack = ArrayDeque<EditSnapshot>()
     private val redoStack = ArrayDeque<EditSnapshot>()
     private var timingEditSnapshot: EditSnapshot? = null
-    private fun snapshot() = EditSnapshot(words.map { it.copy() }, selectedIndex, visualMode)
+    private fun snapshot() = EditSnapshot(words.map { cloneWord(it) }, selectedIndex, visualMode)
     private fun pushUndo() { undoStack.addLast(snapshot()); if (undoStack.size > 40) undoStack.removeFirst(); redoStack.clear() }
-    fun undo() { val s = undoStack.removeLastOrNull() ?: return; redoStack.addLast(snapshot()); words = s.words.map { it.copy() }; selectedIndex = s.selected; visualMode = s.mode; invalidate() }
+    fun undo() { val s = undoStack.removeLastOrNull() ?: return; redoStack.addLast(snapshot()); words = s.words.map { cloneWord(it) }; selectedIndex = s.selected; visualMode = s.mode; invalidate() }
     fun redo() { val s = redoStack.removeLastOrNull() ?: return; undoStack.addLast(snapshot()); words = s.words.map { it.copy() }; selectedIndex = s.selected; visualMode = s.mode; invalidate() }
 
     fun adjustSelected(dx: Float = 0f, dy: Float = 0f, dz: Float = 0f, dRotX: Float = 0f, dRotY: Float = 0f, dScale: Float = 0f, dStartMs: Long = 0L, dEndMs: Long = 0L) {
