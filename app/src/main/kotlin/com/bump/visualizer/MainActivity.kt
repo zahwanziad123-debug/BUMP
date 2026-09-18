@@ -2,20 +2,34 @@ package com.bump.visualizer
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.os.Handler
+import android.os.Looper
 
 class MainActivity : Activity() {
     private lateinit var visualizer: LyricVisualizerView
+    private lateinit var audio: AudioPlayerController
+    private val handler = Handler(Looper.getMainLooper())
     private var fisheyeOn = false
+
+    private val syncTask = object : Runnable {
+        override fun run() {
+            if (::audio.isInitialized) {
+                visualizer.syncTo(audio.positionMs, audio.isPlaying)
+            }
+            handler.postDelayed(this, 33L)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        audio = AudioPlayerController(this)
         visualizer = LyricVisualizerView(this)
 
         val root = FrameLayout(this).apply {
@@ -52,19 +66,22 @@ class MainActivity : Activity() {
             }
         }
 
+        val play = Button(this).apply {
+            text = "PLAY / PAUSE"
+            setOnClickListener { audio.toggle() }
+        }
+
         val fisheye = Button(this).apply {
             text = "FISHEYE"
             setOnClickListener {
                 fisheyeOn = !fisheyeOn
-                if (fisheyeOn) {
-                    visualizer.post { FisheyeEffect.apply(visualizer, 0.18f) }
-                } else {
-                    FisheyeEffect.clear(visualizer)
-                }
+                if (fisheyeOn) visualizer.post { FisheyeEffect.apply(visualizer, 0.18f) }
+                else FisheyeEffect.clear(visualizer)
             }
         }
 
         controls.addView(pick)
+        controls.addView(play)
         controls.addView(fisheye)
 
         root.addView(controls, FrameLayout.LayoutParams(-2, -2).apply {
@@ -73,5 +90,26 @@ class MainActivity : Activity() {
         })
 
         setContentView(root)
+        handler.post(syncTask)
+    }
+
+    @Deprecated("Use Activity Result APIs in a later UI pass")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 100 && resultCode == RESULT_OK) {
+            data?.data?.let { uri: Uri ->
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                audio.open(uri)
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(syncTask)
+        audio.release()
+        super.onDestroy()
     }
 }
