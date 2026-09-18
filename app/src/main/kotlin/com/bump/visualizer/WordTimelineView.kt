@@ -25,6 +25,8 @@ class WordTimelineView(context: Context) : View(context) {
     var onWordSelected: ((Int) -> Unit)? = null
     var onWordChanged: ((Int, Long, Long) -> Unit)? = null
     var onSeek: ((Long) -> Unit)? = null
+    var onWordEditStarted: (() -> Unit)? = null
+    var onWordEditFinished: (() -> Unit)? = null
 
     fun setWords(value: List<LyricWord>) { words = value.map { it.copy() }; invalidate() }
     fun setSelected(index: Int) { selected = index; invalidate() }
@@ -100,6 +102,7 @@ class WordTimelineView(context: Context) : View(context) {
                         else -> 3
                     }
                     dragging = true
+                    onWordEditStarted?.invoke()
                 } else {
                     cursorMs = xToTime(e.x)
                     onSeek?.invoke(cursorMs)
@@ -127,6 +130,7 @@ class WordTimelineView(context: Context) : View(context) {
                 return true
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (dragging) onWordEditFinished?.invoke()
                 dragging = false
                 return true
             }
