@@ -28,6 +28,7 @@ class MainActivity : Activity() {
     private lateinit var timeline: SeekBar
     private lateinit var timelineLabel: TextView
     private lateinit var wordTimeline: WordTimelineView
+    private lateinit var status: TextView
     private lateinit var keyframeStatus: TextView
     private lateinit var kfTime: EditText
     private lateinit var kfX: EditText
@@ -75,7 +76,7 @@ class MainActivity : Activity() {
             topMargin = 22
         })
 
-        val status = TextView(this).apply {
+        status = TextView(this).apply {
             text = "SOURCE: LOCAL AUDIO"
             textSize = 12f
             setTextColor(android.graphics.Color.WHITE)
@@ -189,7 +190,7 @@ class MainActivity : Activity() {
             }
             onKeyframeChanged = { wordIndex, keyIndex, timeMs ->
                 visualizer.selectKeyframe(wordIndex, keyIndex)
-                visualizer.updateSelectedKeyframe(timeMs = timeMs)
+                visualizer.moveSelectedKeyframeTime(timeMs)
                 setWords(visualizer.exportWords())
                 setSelected(wordIndex)
                 setSelectedKeyframe(visualizer.selectedKeyframeIndex())
@@ -483,7 +484,7 @@ class MainActivity : Activity() {
                 }
                 val a = v.map { it!! }
                 visualizer.beginKeyframeEdit()
-                visualizer.updateSelectedKeyframe(
+                visualizer.setSelectedKeyframeValues(
                     timeMs = a[0].toLong(), x = a[1], y = a[2], z = a[3],
                     rotationX = a[4], rotationY = a[5], scale = a[6], opacity = a[7]
                 )
