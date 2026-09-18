@@ -76,6 +76,21 @@ class WordTimelineView(context: Context) : View(context) {
             paint.textSize = 14f
             val label = if (w.text.length > 16) w.text.take(15) + "…" else w.text
             c.drawText(label, left + 7f, y + 20f, paint)
+
+            paint.color = if (i == selected) Color.WHITE else Color.rgb(170, 170, 170)
+            w.keyframes.forEach { k ->
+                val kx = timeToX(k.timeMs)
+                val ky = y + 15f
+                val size = 5f
+                val path = android.graphics.Path().apply {
+                    moveTo(kx, ky - size)
+                    lineTo(kx + size, ky)
+                    lineTo(kx, ky + size)
+                    lineTo(kx - size, ky)
+                    close()
+                }
+                c.drawPath(path, paint)
+            }
         }
         paint.color = Color.WHITE
         paint.strokeWidth = 2f
