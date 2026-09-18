@@ -17,6 +17,7 @@ class MainActivity : Activity() {
     private lateinit var audio: AudioPlayerController
     private val handler = Handler(Looper.getMainLooper())
     private var fisheyeOn = false
+    private var selectedProvider = "LOCAL"
     private val songPickerRequest = 100
     private val lyricPickerRequest = 101
 
@@ -52,7 +53,7 @@ class MainActivity : Activity() {
         })
 
         val providerStatus = TextView(this).apply {
-            text = "LOCAL AUDIO"
+            text = "SOURCE: LOCAL AUDIO"
             textSize = 12f
             setTextColor(android.graphics.Color.WHITE)
             alpha = 0.65f
@@ -101,7 +102,8 @@ class MainActivity : Activity() {
             text = "SPOTIFY"
             setOnClickListener {
                 val opened = StreamingAppLauncher.open(this@MainActivity, StreamingProvider.SPOTIFY)
-                providerStatus.text = if (opened) "SPOTIFY OPENED — BUMP STREAMING CONNECTION" else "SPOTIFY NOT INSTALLED"
+                selectedProvider = if (opened) "SPOTIFY" else "LOCAL"
+                providerStatus.text = if (opened) "SOURCE: SPOTIFY • CONTROL ONLY" else "SOURCE: LOCAL AUDIO • SPOTIFY NOT INSTALLED"
             }
         }
 
@@ -109,7 +111,8 @@ class MainActivity : Activity() {
             text = "APPLE MUSIC"
             setOnClickListener {
                 val opened = StreamingAppLauncher.open(this@MainActivity, StreamingProvider.APPLE_MUSIC)
-                providerStatus.text = if (opened) "APPLE MUSIC OPENED — BUMP STREAMING CONNECTION" else "APPLE MUSIC NOT INSTALLED"
+                selectedProvider = if (opened) "APPLE MUSIC" else "LOCAL"
+                providerStatus.text = if (opened) "SOURCE: APPLE MUSIC • PLAYBACK READY" else "SOURCE: LOCAL AUDIO • APPLE MUSIC NOT INSTALLED"
             }
         }
 
