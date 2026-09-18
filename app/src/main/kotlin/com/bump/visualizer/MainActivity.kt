@@ -112,7 +112,7 @@ class MainActivity : Activity() {
             setOnClickListener {
                 val opened = StreamingAppLauncher.open(this@MainActivity, StreamingProvider.APPLE_MUSIC)
                 selectedProvider = if (opened) "APPLE MUSIC" else "LOCAL"
-                providerStatus.text = if (opened) "SOURCE: APPLE MUSIC • PLAYBACK READY" else "SOURCE: LOCAL AUDIO • APPLE MUSIC NOT INSTALLED"
+                SOURCE: APPLE MUSIC • SDK SETUP REQUIRED" else "SOURCE: LOCAL AUDIO • APPLE MUSIC NOT INSTALLED"
             }
         }
 
