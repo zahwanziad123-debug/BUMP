@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
+import android.widget.EditText
+import android.app.AlertDialog
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -164,7 +166,30 @@ class MainActivity : Activity() {
                 if (audio.durationMs > 0) audio.seekTo(positionMs)
             }
             onWordEditStarted = { visualizer.beginTimingEdit() }
-            onWordEditFinished = { visualizer.endTimingEdit() }
+            onWordEditFinished = {
+                visualizer.endTimingEdit()
+                wordTimeline.setWords(visualizer.exportWords())
+            }
+            onKeyframeSelected = { wordIndex, keyIndex ->
+                visualizer.selectKeyframe(wordIndex, keyIndex)
+                setSelected(wordIndex)
+                setSelectedKeyframe(keyIndex)
+                status.text = "KEYFRAME SELECTED"
+            }
+            onKeyframeChanged = { wordIndex, keyIndex, timeMs ->
+                visualizer.selectKeyframe(wordIndex, keyIndex)
+                visualizer.updateSelectedKeyframe(timeMs = timeMs)
+                setWords(visualizer.exportWords())
+                setSelected(wordIndex)
+                setSelectedKeyframe(visualizer.selectedKeyframeIndex())
+            }
+            onKeyframeEditStarted = { visualizer.beginKeyframeEdit() }
+            onKeyframeEditFinished = {
+                visualizer.endKeyframeEdit()
+                wordTimeline.setWords(visualizer.exportWords())
+                wordTimeline.setSelected(visualizer.selectedIndex())
+                wordTimeline.setSelectedKeyframe(visualizer.selectedKeyframeIndex())
+            }
         }
         val timelineScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = true
@@ -209,10 +234,12 @@ class MainActivity : Activity() {
             wordTimeline.setWords(visualizer.exportWords())
             wordTimeline.setSelected(visualizer.selectedIndex())
         })
+        keyframes.addView(editButton("EDIT KEYFRAME") { showKeyframeEditor() })
         keyframes.addView(editButton("DELETE KEYFRAME") {
-            visualizer.removeNearestKeyframe()
+            visualizer.removeSelectedKeyframe()
             wordTimeline.setWords(visualizer.exportWords())
             wordTimeline.setSelected(visualizer.selectedIndex())
+            wordTimeline.setSelectedKeyframe(visualizer.selectedKeyframeIndex())
         })
         keyframes.addView(editButton("KEYFRAMES") {
             status.text = "KEYFRAMES: ${visualizer.keyframeCount()}"
@@ -296,6 +323,63 @@ class MainActivity : Activity() {
                 audio.open(uri)
             }
         }
+    }
+
+    private fun showKeyframeEditor() {
+        val k = visualizer.selectedKeyframe()
+        if (k == null) {
+            status.text = "SELECT A KEYFRAME FIRST"
+            return
+        }
+
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 0, 24, 0)
+        }
+
+        fun field(label: String, value: String): EditText =
+            EditText(this).apply {
+                hint = label
+                setText(value)
+                setSelectAllOnFocus(true)
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                    android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL or
+                    android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
+            }
+
+        val time = field("TIME (ms)", k.timeMs.toString())
+        val x = field("X", k.x.toString())
+        val y = field("Y", k.y.toString())
+        val z = field("Z", k.z.toString())
+        val rx = field("ROTATION X", k.rotationX.toString())
+        val ry = field("ROTATION Y", k.rotationY.toString())
+        val scale = field("SCALE", k.scale.toString())
+        val opacity = field("OPACITY 0..1", k.opacity.toString())
+        listOf(time, x, y, z, rx, ry, scale, opacity).forEach(box::addView)
+
+        AlertDialog.Builder(this)
+            .setTitle("EDIT KEYFRAME")
+            .setView(box)
+            .setNegativeButton("CANCEL", null)
+            .setPositiveButton("APPLY") { _, _ ->
+                val v = listOf(time, x, y, z, rx, ry, scale, opacity).map { it.text.toString().toFloatOrNull() }
+                if (v.any { it == null }) {
+                    status.text = "INVALID KEYFRAME VALUE"
+                    return@setPositiveButton
+                }
+                val a = v.map { it!! }
+                visualizer.beginKeyframeEdit()
+                visualizer.updateSelectedKeyframe(
+                    timeMs = a[0].toLong(), x = a[1], y = a[2], z = a[3],
+                    rotationX = a[4], rotationY = a[5], scale = a[6], opacity = a[7]
+                )
+                visualizer.endKeyframeEdit()
+                wordTimeline.setWords(visualizer.exportWords())
+                wordTimeline.setSelected(visualizer.selectedIndex())
+                wordTimeline.setSelectedKeyframe(visualizer.selectedKeyframeIndex())
+                status.text = "KEYFRAME UPDATED"
+            }
+            .show()
     }
 
     private fun formatTime(ms: Long): String {
