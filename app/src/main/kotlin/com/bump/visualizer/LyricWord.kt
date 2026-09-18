@@ -2,7 +2,7 @@ package com.bump.visualizer
 
 data class LyricWord(
     val text: String,
-    val startMs: Long,
+    var startMs: Long,
     var endMs: Long,
     var x: Float = 0f,
     var y: Float = 0f,
