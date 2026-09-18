@@ -11,6 +11,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.HorizontalScrollView
 
 class MainActivity : Activity() {
     private lateinit var visualizer: LyricVisualizerView
@@ -22,14 +23,17 @@ class MainActivity : Activity() {
     private val lyricPickerRequest = 101
     private lateinit var timeline: SeekBar
     private lateinit var timelineLabel: TextView
+    private lateinit var wordTimeline: WordTimelineView
 
     private val syncTask = object : Runnable {
         override fun run() {
             if (::audio.isInitialized) {
                 visualizer.syncTo(audio.positionMs, audio.isPlaying)
+                if (audio.durationMs > 0) wordTimeline.setDuration(audio.durationMs)
+                wordTimeline.setCursor(audio.positionMs)
                 if (audio.durationMs > 0) {
                     timeline.progress = ((audio.positionMs * 1000L) / audio.durationMs).toInt().coerceIn(0, 1000)
-                    timelineLabel.text = "TIMELINE \${formatTime(audio.positionMs)} / \${formatTime(audio.durationMs)}"
+                    timelineLabel.text = "TIMELINE ${formatTime(audio.positionMs)} / ${formatTime(audio.durationMs)}"
                 }
             }
             handler.postDelayed(this, 33L)
@@ -101,7 +105,8 @@ class MainActivity : Activity() {
             status.text = if (opened) "SOURCE: APPLE MUSIC • SDK SETUP REQUIRED" else "SOURCE: LOCAL AUDIO • APPLE MUSIC NOT INSTALLED"
         })
 
-        val modeButton = editButton("SHIP") {
+        lateinit var modeButton: Button
+        modeButton = editButton("SHIP") {
             visualModeIndex = (visualModeIndex + 1) % 4
             val next = when (visualModeIndex) {
                 0 -> VisualMode.SHIP
@@ -142,6 +147,26 @@ class MainActivity : Activity() {
         editor.addView(timeline)
         editor.addView(timelineLabel)
 
+        wordTimeline = WordTimelineView(this).apply {
+            setDuration(if (audio.durationMs > 0) audio.durationMs else 60000L)
+            setWords(visualizer.exportWords())
+            setSelected(visualizer.selectedIndex())
+            onWordSelected = { index ->
+                visualizer.selectWord(index)
+                setSelected(index)
+            }
+            onWordChanged = { index, start, end ->
+                visualizer.setWordTiming(index, start, end)
+                setWords(visualizer.exportWords())
+                setSelected(index)
+            }
+        }
+        val timelineScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = true
+            addView(wordTimeline, HorizontalScrollView.LayoutParams(5000, 170))
+        }
+        editor.addView(timelineScroll)
+
         val navigation = LinearLayout(this).apply { gravity = Gravity.CENTER }
         navigation.addView(editButton("PREV") {
             if (visualizer.wordCount() > 0) visualizer.selectWord((visualizer.selectedIndex() - 1).coerceAtLeast(0))
@@ -181,6 +206,7 @@ class MainActivity : Activity() {
         projectControls.addView(editButton("LOAD PROJECT") {
             ProjectStore.load(this@MainActivity)?.let { project ->
                 visualizer.setWords(project.words)
+                wordTimeline.setWords(visualizer.exportWords())
                 visualizer.setVisualMode(project.mode)
                 visualModeIndex = when (project.mode) {
                     VisualMode.SHIP -> 0
@@ -223,7 +249,8 @@ class MainActivity : Activity() {
         data?.data?.let { uri ->
             if (requestCode == lyricPickerRequest) {
                 contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                LyricFileLoader.load(this, uri)?.let { text -> visualizer.setWords(LrcParser.parse(text)) }
+                LyricFileLoader.load(this, uri)?.let { text -> visualizer.setWords(LrcParser.parse(text))
+                    wordTimeline.setWords(visualizer.exportWords()) }
             } else if (requestCode == songPickerRequest) {
                 contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 audio.open(uri)
