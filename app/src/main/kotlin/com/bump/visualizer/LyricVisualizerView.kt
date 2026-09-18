@@ -113,7 +113,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
             // Perspective projection. Farther words shrink and move toward
             // a vanishing point near the center.
-            val perspective = 1f / (1f + abs(modeDepth) / 1050f)
+            val perspective = 1f / (1f + abs(z) / 1050f)
             val drift = sin(modePhase * 0.65f + i * 1.17f)
             val sway = cos(modePhase * 0.42f + i * 0.73f)
 
