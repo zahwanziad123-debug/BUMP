@@ -51,6 +51,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
     fun setWords(newWords: List<LyricWord>) { words = newWords.toMutableList(); selectedIndex = -1; timelineMs = 0L; invalidate() }
 
+    fun exportWords(): List<LyricWord> = words.map { it.copy() }
+
     fun selectedWord(): LyricWord? = words.getOrNull(selectedIndex)
     fun selectedIndex(): Int = selectedIndex
 
