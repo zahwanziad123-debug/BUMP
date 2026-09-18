@@ -18,6 +18,7 @@ class MainActivity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
     private var fisheyeOn = false
     private var selectedProvider = "LOCAL"
+    private var visualModeIndex = 0
     private val songPickerRequest = 100
     private val lyricPickerRequest = 101
 
@@ -116,6 +117,20 @@ class MainActivity : Activity() {
             }
         }
 
+        val mode = Button(this).apply {
+            text = "SHIP"
+            setOnClickListener {
+                visualModeIndex = (visualModeIndex + 1) % 3
+                val next = when (visualModeIndex) {
+                    0 -> VisualMode.SHIP
+                    1 -> VisualMode.STACK
+                    else -> VisualMode.TUNNEL
+                }
+                text = next.name
+                visualizer.setVisualMode(next)
+            }
+        }
+
         val fisheye = Button(this).apply {
             text = "FISHEYE"
             setOnClickListener {
@@ -130,6 +145,7 @@ class MainActivity : Activity() {
         controls.addView(play)
         controls.addView(spotify)
         controls.addView(appleMusic)
+        controls.addView(mode)
         controls.addView(fisheye)
 
         val editor = LinearLayout(this).apply {
