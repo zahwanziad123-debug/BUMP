@@ -60,13 +60,20 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         invalidate()
     }
 
-    override fun syncTo(ms: Long, playing: Boolean) {\n        timelineMs = ms.coerceAtLeast(0L)\n        running = playing\n        invalidate()\n    }\n\n    fun onDraw(canvas: Canvas) {
+    override fun syncTo(ms: Long, playing: Boolean) {
+        timelineMs = ms.coerceAtLeast(0L)
+        running = playing
+        invalidate()
+    }
+
+    fun onDraw(canvas: Canvas) {
         canvas.drawColor(Color.BLACK)
         if (width == 0 || height == 0) return
 
         val cx = width / 2f
         val cy = height / 2f
-        val current = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)\n        if (selectedIndex < 0) selectedIndex = current
+        val current = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)
+        if (selectedIndex < 0) selectedIndex = current
 
         // Ship-style wall: the current word is closest to the viewer,
         // surrounding words form a drifting 3D field behind it.
@@ -75,7 +82,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         val ordered = (first..last).toList().sortedByDescending { it }
 
         for (i in ordered) {
-            val word = words[i]\n            val isSelected = i == selectedIndex
+            val word = words[i]
+            val isSelected = i == selectedIndex
             val depthIndex = i - current
             val age = timelineMs - word.startMs
             val progress = ((age / 900f).coerceIn(-1f, 1.5f))
@@ -169,8 +177,13 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
                 selectedWord()?.let { w -> w.x += event.x - dragX; w.y += event.y - dragY }
                 dragX = event.x; dragY = event.y; invalidate(); return true
             }
-            MotionEvent.ACTION_MOVE -> {\n                selectedWord()?.let { w -> w.x += event.x - dragX; w.y += event.y - dragY }\n                dragX = event.x; dragY = event.y; invalidate(); return true\n            }\n            MotionEvent.ACTION_UP -> {
-                if (abs(event.x - downX) < 24f && words.isNotEmpty()) {\n                    selectedIndex = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)
+            MotionEvent.ACTION_MOVE -> {
+                selectedWord()?.let { w -> w.x += event.x - dragX; w.y += event.y - dragY }
+                dragX = event.x; dragY = event.y; invalidate(); return true
+            }
+            MotionEvent.ACTION_UP -> {
+                if (abs(event.x - downX) < 24f && words.isNotEmpty()) {
+                    selectedIndex = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)
                     running = !running
                     lastNanos = System.nanoTime()
                 }
