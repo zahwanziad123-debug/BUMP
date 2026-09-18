@@ -24,7 +24,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     private val camera = Camera()
     private val matrix = Matrix()
     private var timelineMs = 0L
-    private var running = true
+    private var running = false
+    private var externalClock = false
     private var lastNanos = System.nanoTime()
     private var downX = 0f
     private var modePhase = 0f
@@ -41,10 +42,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
     override fun doFrame(frameTimeNanos: Long) {
         val delta = ((frameTimeNanos - lastNanos) / 1_000_000L).coerceIn(0L, 50L)
-        if (running) {
-            timelineMs += delta
-            modePhase += delta / 1000f
-        }
+        if (!externalClock && running) timelineMs += delta
+        modePhase += delta / 1000f
         lastNanos = frameTimeNanos
         invalidate()
         Choreographer.getInstance().postFrameCallback(this)
@@ -76,6 +75,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     }
 
     override fun syncTo(ms: Long, playing: Boolean) {
+        externalClock = true
         timelineMs = ms.coerceAtLeast(0L)
         running = playing
         invalidate()
