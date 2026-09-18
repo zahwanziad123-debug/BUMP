@@ -68,10 +68,23 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         val ns = startMs.coerceAtLeast(0L)
         val ne = endMs.coerceAtLeast(ns + 80L)
         if (w.startMs == ns && w.endMs == ne) return
-        pushUndo()
         w.startMs = ns
         w.endMs = ne
         invalidate()
+    }
+
+    fun beginTimingEdit() {
+        if (timingEditSnapshot == null) timingEditSnapshot = snapshot()
+    }
+
+    fun endTimingEdit() {
+        val before = timingEditSnapshot ?: return
+        timingEditSnapshot = null
+        if (before.words != words) {
+            undoStack.addLast(before)
+            if (undoStack.size > 40) undoStack.removeFirst()
+            redoStack.clear()
+        }
     }
 
     fun setVisualMode(mode: VisualMode) { visualMode = mode; invalidate() }
@@ -81,6 +94,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     private data class EditSnapshot(val words: List<LyricWord>, val selected: Int, val mode: VisualMode)
     private val undoStack = ArrayDeque<EditSnapshot>()
     private val redoStack = ArrayDeque<EditSnapshot>()
+    private var timingEditSnapshot: EditSnapshot? = null
     private fun snapshot() = EditSnapshot(words.map { it.copy() }, selectedIndex, visualMode)
     private fun pushUndo() { undoStack.addLast(snapshot()); if (undoStack.size > 40) undoStack.removeFirst(); redoStack.clear() }
     fun undo() { val s = undoStack.removeLastOrNull() ?: return; redoStack.addLast(snapshot()); words = s.words.map { it.copy() }; selectedIndex = s.selected; visualMode = s.mode; invalidate() }
