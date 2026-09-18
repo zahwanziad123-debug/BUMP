@@ -51,6 +51,12 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
     fun selectedWord(): LyricWord? = words.getOrNull(selectedIndex)
     fun selectedIndex(): Int = selectedIndex
+
+    fun selectWord(index: Int) {
+        if (words.isEmpty()) { selectedIndex = -1; return }
+        selectedIndex = index.coerceIn(0, words.lastIndex)
+        invalidate()
+    }
     fun wordCount(): Int = words.size
 
     fun adjustSelected(dx: Float = 0f, dy: Float = 0f, dz: Float = 0f, dRotX: Float = 0f, dRotY: Float = 0f, dScale: Float = 0f, dStartMs: Long = 0L, dEndMs: Long = 0L) {
@@ -71,11 +77,18 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     fun onDraw(canvas: Canvas) {
         canvas.drawColor(Color.BLACK)
         if (width == 0 || height == 0) return
+        if (words.isEmpty()) {
+            face.textSize = 12f
+            face.color = Color.rgb(105, 105, 105)
+            face.alpha = 255
+            canvas.drawText("BUMP  •  NO LYRICS", width / 2f, height / 2f, face)
+            return
+        }
 
         val cx = width / 2f
         val cy = height / 2f
         val current = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)
-        if (selectedIndex < 0) selectedIndex = current
+        if (selectedIndex !in words.indices) selectedIndex = current
 
         // Ship-style wall: the current word is closest to the viewer,
         // surrounding words form a drifting 3D field behind it.
