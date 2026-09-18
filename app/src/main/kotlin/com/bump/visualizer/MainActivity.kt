@@ -51,6 +51,14 @@ class MainActivity : Activity() {
             topMargin = 22
         })
 
+        val providerStatus = TextView(this).apply {
+            text = "LOCAL AUDIO"
+            textSize = 12f
+            setTextColor(android.graphics.Color.WHITE)
+            alpha = 0.65f
+            gravity = Gravity.CENTER
+        }
+
         val controls = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -89,6 +97,22 @@ class MainActivity : Activity() {
             setOnClickListener { audio.toggle() }
         }
 
+        val spotify = Button(this).apply {
+            text = "SPOTIFY"
+            setOnClickListener {
+                val opened = StreamingAppLauncher.open(this@MainActivity, StreamingProvider.SPOTIFY)
+                providerStatus.text = if (opened) "SPOTIFY OPENED — BUMP STREAMING CONNECTION" else "SPOTIFY NOT INSTALLED"
+            }
+        }
+
+        val appleMusic = Button(this).apply {
+            text = "APPLE MUSIC"
+            setOnClickListener {
+                val opened = StreamingAppLauncher.open(this@MainActivity, StreamingProvider.APPLE_MUSIC)
+                providerStatus.text = if (opened) "APPLE MUSIC OPENED — BUMP STREAMING CONNECTION" else "APPLE MUSIC NOT INSTALLED"
+            }
+        }
+
         val fisheye = Button(this).apply {
             text = "FISHEYE"
             setOnClickListener {
@@ -101,6 +125,8 @@ class MainActivity : Activity() {
         controls.addView(pick)
         controls.addView(pickLrc)
         controls.addView(play)
+        controls.addView(spotify)
+        controls.addView(appleMusic)
         controls.addView(fisheye)
 
         val editor = LinearLayout(this).apply {
@@ -135,6 +161,11 @@ class MainActivity : Activity() {
         transform.addView(editButton("S+") { visualizer.adjustSelected(dScale = 0.05f) })
         transform.addView(editButton("S-") { visualizer.adjustSelected(dScale = -0.05f) })
         editor.addView(transform)
+
+        root.addView(providerStatus, FrameLayout.LayoutParams(-1, -2).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            bottomMargin = 150
+        })
 
         root.addView(editor, FrameLayout.LayoutParams(-1, -2).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
