@@ -6,13 +6,16 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.TextView
 
 class MainActivity : Activity() {
     private lateinit var visualizer: LyricVisualizerView
+    private var fisheyeOn = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         visualizer = LyricVisualizerView(this)
 
         val root = FrameLayout(this).apply {
@@ -32,6 +35,11 @@ class MainActivity : Activity() {
             topMargin = 22
         })
 
+        val controls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+
         val pick = Button(this).apply {
             text = "OPEN SONG"
             setOnClickListener {
@@ -43,7 +51,23 @@ class MainActivity : Activity() {
                 )
             }
         }
-        root.addView(pick, FrameLayout.LayoutParams(-2, -2).apply {
+
+        val fisheye = Button(this).apply {
+            text = "FISHEYE"
+            setOnClickListener {
+                fisheyeOn = !fisheyeOn
+                if (fisheyeOn) {
+                    visualizer.post { FisheyeEffect.apply(visualizer, 0.18f) }
+                } else {
+                    FisheyeEffect.clear(visualizer)
+                }
+            }
+        }
+
+        controls.addView(pick)
+        controls.addView(fisheye)
+
+        root.addView(controls, FrameLayout.LayoutParams(-2, -2).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             bottomMargin = 4
         })
