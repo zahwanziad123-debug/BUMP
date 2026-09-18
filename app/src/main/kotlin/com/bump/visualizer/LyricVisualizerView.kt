@@ -50,6 +50,8 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     fun setWords(newWords: List<LyricWord>) { words = newWords.toMutableList(); selectedIndex = -1; timelineMs = 0L; invalidate() }
 
     fun selectedWord(): LyricWord? = words.getOrNull(selectedIndex)
+    fun selectedIndex(): Int = selectedIndex
+    fun wordCount(): Int = words.size
 
     fun adjustSelected(dx: Float = 0f, dy: Float = 0f, dz: Float = 0f, dRotX: Float = 0f, dRotY: Float = 0f, dScale: Float = 0f, dStartMs: Long = 0L, dEndMs: Long = 0L) {
         val w = selectedWord() ?: return
