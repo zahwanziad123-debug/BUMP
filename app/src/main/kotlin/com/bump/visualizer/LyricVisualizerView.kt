@@ -85,7 +85,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         invalidate()
     }
 
-    override fun syncTo(ms: Long, playing: Boolean) {
+    fun syncTo(ms: Long, playing: Boolean) {
         externalClock = true
         timelineMs = ms.coerceAtLeast(0L)
         running = playing
