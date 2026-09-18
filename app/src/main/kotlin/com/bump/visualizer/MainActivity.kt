@@ -160,12 +160,31 @@ class MainActivity : Activity() {
                 setWords(visualizer.exportWords())
                 setSelected(index)
             }
+            onSeek = { positionMs ->
+                if (audio.durationMs > 0) audio.seekTo(positionMs)
+            }
         }
         val timelineScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = true
-            addView(wordTimeline, HorizontalScrollView.LayoutParams(5000, 170))
+            addView(wordTimeline, HorizontalScrollView.LayoutParams(wordTimeline.contentWidth(), 170))
         }
         editor.addView(timelineScroll)
+
+        val zoomControls = LinearLayout(this).apply { gravity = Gravity.CENTER }
+        zoomControls.addView(editButton("ZOOM -") {
+            wordTimeline.zoomOut()
+            wordTimeline.requestLayout()
+        })
+        zoomControls.addView(editButton("ZOOM +") {
+            wordTimeline.zoomIn()
+            wordTimeline.requestLayout()
+        })
+        zoomControls.addView(editButton("CENTER") {
+            val target = visualizer.selectedWord()?.startMs ?: 0L
+            wordTimeline.setCursor(target)
+            if (audio.durationMs > 0) audio.seekTo(target)
+        })
+        editor.addView(zoomControls)
 
         val navigation = LinearLayout(this).apply { gravity = Gravity.CENTER }
         navigation.addView(editButton("PREV") {
@@ -249,8 +268,11 @@ class MainActivity : Activity() {
         data?.data?.let { uri ->
             if (requestCode == lyricPickerRequest) {
                 contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                LyricFileLoader.load(this, uri)?.let { text -> visualizer.setWords(LrcParser.parse(text))
-                    wordTimeline.setWords(visualizer.exportWords()) }
+                LyricFileLoader.load(this, uri)?.let { text ->
+                    visualizer.setWords(LrcParser.parse(text))
+                    wordTimeline.setWords(visualizer.exportWords())
+                    wordTimeline.setSelected(visualizer.selectedIndex())
+                }
             } else if (requestCode == songPickerRequest) {
                 contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 audio.open(uri)
