@@ -87,6 +87,27 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         }
     }
 
+    fun addKeyframe(timeMs: Long = timelineMs) {
+        val w = selectedWord() ?: return
+        pushUndo()
+        val state = AnimatedWordState(w.x, w.y, w.z, w.rotationX, w.rotationY, w.scale, 1f)
+        w.keyframes.removeAll { abs(it.timeMs - timeMs) < 20L }
+        w.keyframes.add(LyricKeyframe(timeMs.coerceAtLeast(0L), state.x, state.y, state.z, state.rotationX, state.rotationY, state.scale, state.opacity))
+        w.keyframes.sortBy { it.timeMs }
+        invalidate()
+    }
+
+    fun removeNearestKeyframe(timeMs: Long = timelineMs) {
+        val w = selectedWord() ?: return
+        val index = w.keyframes.indices.minByOrNull { abs(w.keyframes[it].timeMs - timeMs) } ?: return
+        if (abs(w.keyframes[index].timeMs - timeMs) > 250L) return
+        pushUndo()
+        w.keyframes.removeAt(index)
+        invalidate()
+    }
+
+    fun keyframeCount(): Int = selectedWord()?.keyframes?.size ?: 0
+
     fun setVisualMode(mode: VisualMode) { visualMode = mode; invalidate() }
 
     fun visualMode(): VisualMode = visualMode
