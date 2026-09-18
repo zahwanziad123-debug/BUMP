@@ -177,14 +177,9 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
                 selectedWord()?.let { w -> w.x += event.x - dragX; w.y += event.y - dragY }
                 dragX = event.x; dragY = event.y; invalidate(); return true
             }
-            MotionEvent.ACTION_MOVE -> {
-                selectedWord()?.let { w -> w.x += event.x - dragX; w.y += event.y - dragY }
-                dragX = event.x; dragY = event.y; invalidate(); return true
-            }
             MotionEvent.ACTION_UP -> {
                 if (abs(event.x - downX) < 24f && words.isNotEmpty()) {
                     selectedIndex = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)
-                    running = !running
                     lastNanos = System.nanoTime()
                 }
                 return true
