@@ -47,6 +47,19 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         Choreographer.getInstance().postFrameCallback(this)
     }
 
+    fun setWords(newWords: List<LyricWord>) { words = newWords.toMutableList(); selectedIndex = -1; timelineMs = 0L; invalidate() }
+
+    fun selectedWord(): LyricWord? = words.getOrNull(selectedIndex)
+
+    fun adjustSelected(dx: Float = 0f, dy: Float = 0f, dz: Float = 0f, dRotX: Float = 0f, dRotY: Float = 0f, dScale: Float = 0f, dStartMs: Long = 0L, dEndMs: Long = 0L) {
+        val w = selectedWord() ?: return
+        w.x += dx; w.y += dy; w.z += dz; w.rotationX += dRotX; w.rotationY += dRotY
+        w.scale = (w.scale + dScale).coerceIn(0.25f, 3f)
+        w.startMs = (w.startMs + dStartMs).coerceAtLeast(0L)
+        w.endMs = (w.endMs + dEndMs).coerceAtLeast(w.startMs + 80L)
+        invalidate()
+    }
+
     override fun syncTo(ms: Long, playing: Boolean) {\n        timelineMs = ms.coerceAtLeast(0L)\n        running = playing\n        invalidate()\n    }\n\n    fun onDraw(canvas: Canvas) {
         canvas.drawColor(Color.BLACK)
         if (width == 0 || height == 0) return
@@ -75,7 +88,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
             val sway = cos(modePhase * 0.42f + i * 0.73f)
 
             val x = cx + word.x + (sin(i * 1.91f) * (120f + abs(depthIndex) * 28f) + sway * 24f) * perspective
-            val y = cy + word.y + (depthIndex * 108f) + drift * 30f) * perspective
+            val y = cy + (word.y + (depthIndex * 108f + drift * 30f)) * perspective
             val rotationY = word.rotationY + (sin(i * 0.61f + modePhase * 0.32f) * 30f) + depthIndex * 3.5f
             val rotationX = word.rotationX + cos(i * 0.47f + modePhase * 0.25f) * 12f
 
@@ -122,6 +135,12 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
             face.alpha = alpha
             canvas.drawText(word.text, x, y, face)
 
+            if (isSelected) {
+                edge.style = Paint.Style.STROKE; edge.strokeWidth = 2f; edge.color = Color.WHITE; edge.alpha = 180
+                val bw = max(70f, face.measureText(word.text) + 26f)
+                canvas.drawRect(x - bw / 2f, y - size, x + bw / 2f, y + 16f, edge)
+                edge.style = Paint.Style.FILL
+            }
             canvas.restore()
         }
 
@@ -143,8 +162,12 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                downX = event.x
+                downX = event.x; dragX = event.x; dragY = event.y
                 return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                selectedWord()?.let { w -> w.x += event.x - dragX; w.y += event.y - dragY }
+                dragX = event.x; dragY = event.y; invalidate(); return true
             }
             MotionEvent.ACTION_MOVE -> {\n                selectedWord()?.let { w -> w.x += event.x - dragX; w.y += event.y - dragY }\n                dragX = event.x; dragY = event.y; invalidate(); return true\n            }\n            MotionEvent.ACTION_UP -> {
                 if (abs(event.x - downX) < 24f && words.isNotEmpty()) {\n                    selectedIndex = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)
