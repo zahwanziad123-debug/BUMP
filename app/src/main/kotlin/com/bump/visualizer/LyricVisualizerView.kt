@@ -31,6 +31,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     private var modePhase = 0f
     private var visualMode = VisualMode.SHIP
     private var selectedIndex = -1
+    private var selectedKeyframe = -1
     private var dragX = 0f
     private var dragY = 0f
 
@@ -94,10 +95,53 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         pushUndo()
         val state = KeyframeEngine.evaluate(w, timeMs)
         w.keyframes.removeAll { abs(it.timeMs - timeMs) < 20L }
-        w.keyframes.add(LyricKeyframe(timeMs.coerceAtLeast(0L), state.x, state.y, state.z, state.rotationX, state.rotationY, state.scale, state.opacity))
+        val t = timeMs.coerceAtLeast(0L)
+        w.keyframes.add(LyricKeyframe(t, state.x, state.y, state.z, state.rotationX, state.rotationY, state.scale, state.opacity))
         w.keyframes.sortBy { it.timeMs }
+        selectedKeyframe = w.keyframes.indexOfFirst { it.timeMs == t }
         invalidate()
     }
+
+    fun removeSelectedKeyframe() {
+        val w = selectedWord() ?: return
+        if (selectedKeyframe !in w.keyframes.indices) return
+        pushUndo()
+        w.keyframes.removeAt(selectedKeyframe)
+        selectedKeyframe = -1
+        invalidate()
+    }
+
+    fun beginKeyframeEdit() { if (keyframeEditSnapshot == null) keyframeEditSnapshot = snapshot() }
+
+    fun endKeyframeEdit() {
+        val before = keyframeEditSnapshot ?: return
+        keyframeEditSnapshot = null
+        if (before.words != words) {
+            undoStack.addLast(before)
+            if (undoStack.size > 40) undoStack.removeFirst()
+            redoStack.clear()
+        }
+    }
+
+    fun updateSelectedKeyframe(timeMs: Long? = null, x: Float? = null, y: Float? = null, z: Float? = null, rotationX: Float? = null, rotationY: Float? = null, scale: Float? = null, opacity: Float? = null): Boolean {
+        val w = selectedWord() ?: return false
+        if (selectedKeyframe !in w.keyframes.indices) return false
+        val current = w.keyframes[selectedKeyframe]
+        val target = timeMs?.coerceAtLeast(0L) ?: current.timeMs
+        if (w.keyframes.filterIndexed { i, _ -> i != selectedKeyframe }.any { abs(it.timeMs - target) < 20L }) return false
+        w.keyframes[selectedKeyframe] = current.copy(
+            timeMs = target, x = x ?: current.x, y = y ?: current.y, z = z ?: current.z,
+            rotationX = rotationX ?: current.rotationX, rotationY = rotationY ?: current.rotationY,
+            scale = scale?.coerceIn(0.05f, 5f) ?: current.scale,
+            opacity = opacity?.coerceIn(0f, 1f) ?: current.opacity
+        )
+        w.keyframes.sortBy { it.timeMs }
+        selectedKeyframe = w.keyframes.indexOfFirst { it.timeMs == target }
+        invalidate()
+        return true
+    }
+
+    fun moveSelectedKeyframeTo(timeMs: Long): Boolean = updateSelectedKeyframe(timeMs = timeMs)
 
     fun removeNearestKeyframe(timeMs: Long = timelineMs) {
         val w = selectedWord() ?: return
@@ -118,6 +162,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     private val undoStack = ArrayDeque<EditSnapshot>()
     private val redoStack = ArrayDeque<EditSnapshot>()
     private var timingEditSnapshot: EditSnapshot? = null
+    private var keyframeEditSnapshot: EditSnapshot? = null
     private fun snapshot() = EditSnapshot(words.map { cloneWord(it) }, selectedIndex, visualMode)
     private fun pushUndo() { undoStack.addLast(snapshot()); if (undoStack.size > 40) undoStack.removeFirst(); redoStack.clear() }
     fun undo() { val s = undoStack.removeLastOrNull() ?: return; redoStack.addLast(snapshot()); words = s.words.map { cloneWord(it) }; selectedIndex = s.selected; visualMode = s.mode; invalidate() }
@@ -125,6 +170,17 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
     fun adjustSelected(dx: Float = 0f, dy: Float = 0f, dz: Float = 0f, dRotX: Float = 0f, dRotY: Float = 0f, dScale: Float = 0f, dStartMs: Long = 0L, dEndMs: Long = 0L) {
         val w = selectedWord() ?: return
+        if (selectedKeyframe in w.keyframes.indices) {
+            pushUndo()
+            val k = w.keyframes[selectedKeyframe]
+            w.keyframes[selectedKeyframe] = k.copy(
+                x = k.x + dx, y = k.y + dy, z = k.z + dz,
+                rotationX = k.rotationX + dRotX, rotationY = k.rotationY + dRotY,
+                scale = (k.scale + dScale).coerceIn(0.05f, 5f)
+            )
+            invalidate()
+            return
+        }
         pushUndo()
         w.x += dx; w.y += dy; w.z += dz; w.rotationX += dRotX; w.rotationY += dRotY
         w.scale = (w.scale + dScale).coerceIn(0.25f, 3f)
@@ -274,6 +330,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
             MotionEvent.ACTION_UP -> {
                 if (abs(event.x - downX) < 24f && words.isNotEmpty()) {
                     selectedIndex = words.indexOfLast { timelineMs >= it.startMs }.coerceIn(0, words.lastIndex)
+                    selectedKeyframe = -1
                     lastNanos = System.nanoTime()
                 }
                 return true
