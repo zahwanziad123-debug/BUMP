@@ -7,6 +7,8 @@ import android.view.MotionEvent
 import android.view.View
 import kotlin.math.*
 
+enum class VisualMode { SHIP, STACK, TUNNEL }
+
 class LyricVisualizerView(context: Context) : View(context), Choreographer.FrameCallback {
     private var words: List<LyricWord> = LyricTimeline.demo()
     private val face = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -26,6 +28,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
     private var lastNanos = System.nanoTime()
     private var downX = 0f
     private var modePhase = 0f
+    private var visualMode = VisualMode.SHIP
     private var selectedIndex = -1
     private var dragX = 0f
     private var dragY = 0f
@@ -58,6 +61,10 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         invalidate()
     }
     fun wordCount(): Int = words.size
+
+    fun setVisualMode(mode: VisualMode) { visualMode = mode; invalidate() }
+
+    fun visualMode(): VisualMode = visualMode
 
     fun adjustSelected(dx: Float = 0f, dy: Float = 0f, dz: Float = 0f, dRotX: Float = 0f, dRotY: Float = 0f, dScale: Float = 0f, dStartMs: Long = 0L, dEndMs: Long = 0L) {
         val w = selectedWord() ?: return
@@ -106,7 +113,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
             // Perspective projection. Farther words shrink and move toward
             // a vanishing point near the center.
-            val perspective = 1f / (1f + abs(z) / 1050f)
+            val perspective = 1f / (1f + abs(modeDepth) / 1050f)
             val drift = sin(modePhase * 0.65f + i * 1.17f)
             val sway = cos(modePhase * 0.42f + i * 0.73f)
 
@@ -172,7 +179,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         face.color = Color.rgb(105, 105, 105)
         face.alpha = 255
         canvas.drawText(
-            "BUMP  •  ${formatTime(timelineMs)}  •  ${if (running) "PLAYING" else "PAUSED"}",
+            "BUMP  •  ${visualMode.name}  •  ${formatTime(timelineMs)}  •  ${if (running) "PLAYING" else "PAUSED"}",
             cx, height - 28f, face
         )
     }
