@@ -26,6 +26,16 @@ object ProjectStore {
                 put("rotationX", w.rotationX)
                 put("rotationY", w.rotationY)
                 put("scale", w.scale)
+                val frames = JSONArray()
+                w.keyframes.forEach { k ->
+                    frames.put(JSONObject().apply {
+                        put("timeMs", k.timeMs)
+                        put("x", k.x); put("y", k.y); put("z", k.z)
+                        put("rotationX", k.rotationX); put("rotationY", k.rotationY)
+                        put("scale", k.scale); put("opacity", k.opacity)
+                    })
+                }
+                put("keyframes", frames)
             })
         }
         root.put("words", array)
@@ -54,7 +64,23 @@ object ProjectStore {
                         z = o.optDouble("z").toFloat(),
                         rotationX = o.optDouble("rotationX").toFloat(),
                         rotationY = o.optDouble("rotationY").toFloat(),
-                        scale = o.optDouble("scale", 1.0).toFloat()
+                        scale = o.optDouble("scale", 1.0).toFloat(),
+                        keyframes = mutableListOf<LyricKeyframe>().apply {
+                            val frames = o.optJSONArray("keyframes") ?: JSONArray()
+                            for (j in 0 until frames.length()) {
+                                val k = frames.getJSONObject(j)
+                                add(LyricKeyframe(
+                                    k.optLong("timeMs"),
+                                    k.optDouble("x").toFloat(),
+                                    k.optDouble("y").toFloat(),
+                                    k.optDouble("z").toFloat(),
+                                    k.optDouble("rotationX").toFloat(),
+                                    k.optDouble("rotationY").toFloat(),
+                                    k.optDouble("scale", 1.0).toFloat(),
+                                    k.optDouble("opacity", 1.0).toFloat()
+                                ))
+                            }
+                        }
                     ))
                 }
             }
