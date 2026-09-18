@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -244,7 +245,7 @@ class MainActivity : Activity() {
         }
         val timelineScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = true
-            addView(wordTimeline, HorizontalScrollView.LayoutParams(wordTimeline.contentWidth(), 170))
+            addView(wordTimeline, ViewGroup.LayoutParams(wordTimeline.contentWidth(), 170))
         }
         editor.addView(timelineScroll)
 
@@ -263,6 +264,23 @@ class MainActivity : Activity() {
             if (audio.durationMs > 0) audio.seekTo(target)
         })
         editor.addView(zoomControls)
+
+        fun syncKeyframeFields() {
+            val k = visualizer.selectedKeyframe()
+            if (k == null) {
+                keyframeStatus.text = "KEYFRAME: none"
+                return
+            }
+            keyframeStatus.text = "KEYFRAME ${visualizer.selectedKeyframeIndex() + 1} / ${visualizer.keyframeCount()}"
+            kfTime.setText(k.timeMs.toString())
+            kfX.setText(k.x.toString())
+            kfY.setText(k.y.toString())
+            kfZ.setText(k.z.toString())
+            kfRx.setText(k.rotationX.toString())
+            kfRy.setText(k.rotationY.toString())
+            kfScale.setText(k.scale.toString())
+            kfOpacity.setText(k.opacity.toString())
+        }
 
         val navigation = LinearLayout(this).apply { gravity = Gravity.CENTER }
         navigation.addView(editButton("PREV") {
@@ -397,22 +415,7 @@ class MainActivity : Activity() {
         transform.addView(editButton("S-") { visualizer.adjustSelected(dScale = -0.05f) })
         editor.addView(transform)
 
-        fun syncKeyframeFields() {
-            val k = visualizer.selectedKeyframe()
-            if (k == null) {
-                keyframeStatus.text = "KEYFRAME: none"
-                return
-            }
-            keyframeStatus.text = "KEYFRAME ${visualizer.selectedKeyframeIndex() + 1} / ${visualizer.keyframeCount()}"
-            kfTime.setText(k.timeMs.toString())
-            kfX.setText(k.x.toString())
-            kfY.setText(k.y.toString())
-            kfZ.setText(k.z.toString())
-            kfRx.setText(k.rotationX.toString())
-            kfRy.setText(k.rotationY.toString())
-            kfScale.setText(k.scale.toString())
-            kfOpacity.setText(k.opacity.toString())
-        }
+
 
         val advanced = LinearLayout(this).apply { gravity = Gravity.CENTER }
         advanced.addView(editButton("MASK") {
@@ -511,63 +514,6 @@ class MainActivity : Activity() {
                 audio.open(uri)
             }
         }
-    }
-
-    private fun showKeyframeEditor() {
-        val k = visualizer.selectedKeyframe()
-        if (k == null) {
-            status.text = "SELECT A KEYFRAME FIRST"
-            return
-        }
-
-        val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(24, 0, 24, 0)
-        }
-
-        fun field(label: String, value: String): EditText =
-            EditText(this).apply {
-                hint = label
-                setText(value)
-                setSelectAllOnFocus(true)
-                inputType = android.text.InputType.TYPE_CLASS_NUMBER or
-                    android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL or
-                    android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
-            }
-
-        val time = field("TIME (ms)", k.timeMs.toString())
-        val x = field("X", k.x.toString())
-        val y = field("Y", k.y.toString())
-        val z = field("Z", k.z.toString())
-        val rx = field("ROTATION X", k.rotationX.toString())
-        val ry = field("ROTATION Y", k.rotationY.toString())
-        val scale = field("SCALE", k.scale.toString())
-        val opacity = field("OPACITY 0..1", k.opacity.toString())
-        listOf(time, x, y, z, rx, ry, scale, opacity).forEach(box::addView)
-
-        AlertDialog.Builder(this)
-            .setTitle("EDIT KEYFRAME")
-            .setView(box)
-            .setNegativeButton("CANCEL", null)
-            .setPositiveButton("APPLY") { _, _ ->
-                val v = listOf(time, x, y, z, rx, ry, scale, opacity).map { it.text.toString().toFloatOrNull() }
-                if (v.any { it == null }) {
-                    status.text = "INVALID KEYFRAME VALUE"
-                    return@setPositiveButton
-                }
-                val a = v.map { it!! }
-                visualizer.beginKeyframeEdit()
-                visualizer.setSelectedKeyframeValues(
-                    timeMs = a[0].toLong(), x = a[1], y = a[2], z = a[3],
-                    rotationX = a[4], rotationY = a[5], scale = a[6], opacity = a[7]
-                )
-                visualizer.endKeyframeEdit()
-                wordTimeline.setWords(visualizer.exportWords())
-                wordTimeline.setSelected(visualizer.selectedIndex())
-                wordTimeline.setSelectedKeyframe(visualizer.selectedKeyframeIndex())
-                status.text = "KEYFRAME UPDATED"
-            }
-            .show()
     }
 
     private fun formatTime(ms: Long): String {
