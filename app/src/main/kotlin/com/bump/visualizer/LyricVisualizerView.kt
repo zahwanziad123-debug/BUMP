@@ -49,7 +49,7 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
         Choreographer.getInstance().postFrameCallback(this)
     }
 
-    fun setWords(newWords: List<LyricWord>) { words = newWords.toMutableList(); selectedIndex = -1; timelineMs = 0L; invalidate() }
+    fun setWords(newWords: List<LyricWord>) { words = newWords.map { it.copy() }.toMutableList(); selectedIndex = -1; timelineMs = 0L; undoStack.clear(); redoStack.clear(); invalidate() }
 
     fun exportWords(): List<LyricWord> = words.map { it.copy() }
 
@@ -67,8 +67,17 @@ class LyricVisualizerView(context: Context) : View(context), Choreographer.Frame
 
     fun visualMode(): VisualMode = visualMode
 
+    private data class EditSnapshot(val words: List<LyricWord>, val selected: Int, val mode: VisualMode)
+    private val undoStack = ArrayDeque<EditSnapshot>()
+    private val redoStack = ArrayDeque<EditSnapshot>()
+    private fun snapshot() = EditSnapshot(words.map { it.copy() }, selectedIndex, visualMode)
+    private fun pushUndo() { undoStack.addLast(snapshot()); if (undoStack.size > 40) undoStack.removeFirst(); redoStack.clear() }
+    fun undo() { val s = undoStack.removeLastOrNull() ?: return; redoStack.addLast(snapshot()); words = s.words.map { it.copy() }; selectedIndex = s.selected; visualMode = s.mode; invalidate() }
+    fun redo() { val s = redoStack.removeLastOrNull() ?: return; undoStack.addLast(snapshot()); words = s.words.map { it.copy() }; selectedIndex = s.selected; visualMode = s.mode; invalidate() }
+
     fun adjustSelected(dx: Float = 0f, dy: Float = 0f, dz: Float = 0f, dRotX: Float = 0f, dRotY: Float = 0f, dScale: Float = 0f, dStartMs: Long = 0L, dEndMs: Long = 0L) {
         val w = selectedWord() ?: return
+        pushUndo()
         w.x += dx; w.y += dy; w.z += dz; w.rotationX += dRotX; w.rotationY += dRotY
         w.scale = (w.scale + dScale).coerceIn(0.25f, 3f)
         w.startMs = (w.startMs + dStartMs).coerceAtLeast(0L)
