@@ -203,6 +203,22 @@ class MainActivity : Activity() {
         navigation.addView(editButton("REDO") { visualizer.redo() })
         editor.addView(navigation)
 
+        val keyframes = LinearLayout(this).apply { gravity = Gravity.CENTER }
+        keyframes.addView(editButton("ADD KEYFRAME") {
+            visualizer.addKeyframe()
+            wordTimeline.setWords(visualizer.exportWords())
+            wordTimeline.setSelected(visualizer.selectedIndex())
+        })
+        keyframes.addView(editButton("DELETE KEYFRAME") {
+            visualizer.removeNearestKeyframe()
+            wordTimeline.setWords(visualizer.exportWords())
+            wordTimeline.setSelected(visualizer.selectedIndex())
+        })
+        keyframes.addView(editButton("KEYFRAMES") {
+            status.text = "KEYFRAMES: ${visualizer.keyframeCount()}"
+        })
+        editor.addView(keyframes)
+
         val transform = LinearLayout(this).apply { gravity = Gravity.CENTER }
         transform.addView(editButton("X-") { visualizer.adjustSelected(dx = -12f) })
         transform.addView(editButton("X+") { visualizer.adjustSelected(dx = 12f) })
